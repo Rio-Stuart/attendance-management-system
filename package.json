@@ -1,0 +1,26 @@
+{
+  "name": "attendance-management-system",
+  "version": "1.0.0",
+  "description": "Production-grade Attendance Management System with Class Sessions, Attendance Records, Timetable Generation, and Attendance Predictor",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js",
+    "test:java": "test.bat"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.19.2",
+    "serverless-http": "^3.2.0"
+  },
+  "keywords": [
+    "attendance",
+    "university",
+    "timetable",
+    "predictor",
+    "oops",
+    "class-sessions"
+  ],
+  "author": "Rio-Stuart",
+  "license": "MIT"
+}

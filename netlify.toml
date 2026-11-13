@@ -1,0 +1,16 @@
+# Netlify Build & Routing Configuration
+[build]
+  publish = "public"
+  functions = "netlify/functions"
+
+# API requests route to the serverless function
+[[redirects]]
+  from = "/api/*"
+  to = "/.netlify/functions/api/:splat"
+  status = 200
+
+# SPA fallback
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200

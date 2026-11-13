@@ -1,0 +1,667 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Attendance Management System — University Portal</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+</head>
+<body>
+  <div id="app">
+    <!-- TOP NAVIGATION -->
+    <header class="navbar">
+      <div class="nav-container">
+        <div class="brand">
+          <div class="brand-logo">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5Z"/>
+              <path d="m9 10 2 2 4-4"/>
+            </svg>
+          </div>
+          <div>
+            <h1 class="brand-title">AMS Portal</h1>
+            <p class="brand-sub">Attendance & Class Sessions System</p>
+          </div>
+        </div>
+
+        <div class="nav-actions">
+          <!-- Role & User Profile -->
+          <div id="userProfile" class="user-profile hidden">
+            <div class="user-avatar" id="userAvatar">A</div>
+            <div class="user-details">
+              <span class="user-name" id="userName">User</span>
+              <span class="badge" id="userRoleBadge">ROLE</span>
+            </div>
+            <button id="logoutBtn" class="btn btn-outline-danger btn-sm" title="Logout">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+            </button>
+          </div>
+
+          <!-- Quick Login Switcher if Guest -->
+          <div id="guestControls" class="guest-controls">
+            <button id="quickLoginAdmin" class="btn btn-primary btn-sm">Login as Admin</button>
+            <button id="quickLoginStudent" class="btn btn-secondary btn-sm">Login as Student</button>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <!-- MAIN BODY CONTAINER -->
+    <main class="main-content">
+      <!-- NOTIFICATION TOAST -->
+      <div id="toast" class="toast hidden"></div>
+
+      <!-- AUTH MODAL / OVERLAY -->
+      <div id="loginModal" class="modal-overlay hidden">
+        <div class="modal-card">
+          <div class="modal-header">
+            <h3>Sign in to AMS Portal</h3>
+            <button class="close-btn" id="closeLoginModal">&times;</button>
+          </div>
+          <form id="loginForm">
+            <div class="form-group">
+              <label>Role</label>
+              <div class="role-selector">
+                <label class="radio-card">
+                  <input type="radio" name="authRole" value="ADMIN" checked>
+                  <span>Administrator</span>
+                </label>
+                <label class="radio-card">
+                  <input type="radio" name="authRole" value="STUDENT">
+                  <span>Student</span>
+                </label>
+              </div>
+            </div>
+            <div class="form-group">
+              <label>Username</label>
+              <input type="text" id="loginUsername" placeholder="e.g. admin1 or student1" required>
+            </div>
+            <div class="form-group">
+              <label>Password</label>
+              <input type="password" id="loginPassword" placeholder="••••••••" required>
+            </div>
+            <div class="quick-credentials">
+              <p>Demo accounts:</p>
+              <div class="btn-group-sm">
+                <button type="button" class="btn-chip" onclick="fillLogin('admin1','admin123')">Dr. Rajesh (Admin)</button>
+                <button type="button" class="btn-chip" onclick="fillLogin('student1','student123')">Aarav (Student 801)</button>
+                <button type="button" class="btn-chip" onclick="fillLogin('student4','student123')">Sneha (Student 802)</button>
+              </div>
+            </div>
+            <div class="modal-footer">
+              <button type="submit" class="btn btn-primary w-full">Sign In</button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <!-- ============================================== -->
+      <!-- ADMIN VIEW -->
+      <!-- ============================================== -->
+      <div id="adminView" class="view-container hidden">
+        <!-- Sub-navigation tabs -->
+        <div class="tabs-bar">
+          <button class="tab-btn active" data-tab="sessionsTab">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+            Class Sessions
+          </button>
+          <button class="tab-btn" data-tab="attendanceTab">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+            Mark Attendance
+          </button>
+          <button class="tab-btn" data-tab="reportsTab">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.21 15.89A10 10 0 1 1 8 2.83"/><path d="M22 12A10 10 0 0 0 12 2v10z"/></svg>
+            Section Reports & Alerts
+          </button>
+          <button class="tab-btn" data-tab="timetableTab">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            Weekly Timetable
+          </button>
+        </div>
+
+        <!-- 1. SESSIONS TAB -->
+        <div id="sessionsTab" class="tab-content active">
+          <div class="content-header">
+            <div>
+              <h2>Class Sessions Directory</h2>
+              <p>Authoritative registry of conducted, draft, scheduled, and cancelled lectures.</p>
+            </div>
+            <div class="header-actions">
+              <button id="openGenerateModalBtn" class="btn btn-secondary">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/><path d="M16 21h5v-5"/></svg>
+                Generate from Timetable
+              </button>
+              <button id="openCreateSessionBtn" class="btn btn-primary">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                Create Session
+              </button>
+            </div>
+          </div>
+
+          <!-- Filters -->
+          <div class="filters-card">
+            <div class="filter-item">
+              <label>Section</label>
+              <select id="filterSection">
+                <option value="">All Sections</option>
+              </select>
+            </div>
+            <div class="filter-item">
+              <label>Status</label>
+              <select id="filterStatus">
+                <option value="">All Statuses</option>
+                <option value="FINALIZED">FINALIZED (Counts in Attendance)</option>
+                <option value="DRAFT">DRAFT</option>
+                <option value="SCHEDULED">SCHEDULED</option>
+                <option value="CANCELLED">CANCELLED</option>
+              </select>
+            </div>
+            <div class="filter-item">
+              <label>Session Date</label>
+              <input type="date" id="filterDate">
+            </div>
+            <div class="filter-item filter-reset">
+              <button id="resetFiltersBtn" class="btn btn-outline btn-sm">Reset</button>
+            </div>
+          </div>
+
+          <!-- Sessions List Table -->
+          <div class="table-container">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>Date & Time</th>
+                  <th>Section</th>
+                  <th>Subject</th>
+                  <th>Status</th>
+                  <th>Finalized By</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="sessionsTableBody">
+                <tr><td colspan="7" class="loading">Loading class sessions...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- 2. ATTENDANCE MARKING TAB -->
+        <div id="attendanceTab" class="tab-content">
+          <div class="content-header">
+            <div>
+              <h2>Mark & Finalize Attendance</h2>
+              <p>Session-based student attendance sheet with atomic finalization verification.</p>
+            </div>
+          </div>
+
+          <div class="card attendance-session-select">
+            <div class="grid-3">
+              <div class="form-group">
+                <label>Select Section</label>
+                <select id="markingSectionSelect">
+                  <option value="">Choose Section...</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Select Class Session</label>
+                <select id="markingSessionSelect" disabled>
+                  <option value="">Select section first...</option>
+                </select>
+              </div>
+              <div class="form-group form-actions-align">
+                <button id="loadRosterBtn" class="btn btn-primary" disabled>Load Eligible Roster</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Active Session Info Card -->
+          <div id="activeSessionInfo" class="session-info-card hidden">
+            <div class="session-meta">
+              <div>
+                <span class="label">Section:</span> <strong id="infoSection">-</strong>
+              </div>
+              <div>
+                <span class="label">Subject:</span> <strong id="infoSubject">-</strong>
+              </div>
+              <div>
+                <span class="label">Date:</span> <strong id="infoDate">-</strong>
+              </div>
+              <div>
+                <span class="label">Time:</span> <strong id="infoTime">-</strong>
+              </div>
+              <div>
+                <span class="label">Status:</span> <span id="infoStatusBadge" class="badge">STATUS</span>
+              </div>
+            </div>
+
+            <!-- Bulk Marking Toolbar -->
+            <div class="marking-toolbar">
+              <div class="bulk-buttons">
+                <button id="markAllPresentBtn" class="btn btn-sm btn-outline-success">Mark All PRESENT</button>
+                <button id="markAllAbsentBtn" class="btn btn-sm btn-outline-danger">Mark All ABSENT</button>
+              </div>
+              <div class="roster-stats">
+                <span id="rosterCountText">0 students eligible</span>
+              </div>
+            </div>
+
+            <!-- Student Roster Table -->
+            <div class="table-container">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Roll Number</th>
+                    <th>Student Name</th>
+                    <th>Attendance Status</th>
+                  </tr>
+                </thead>
+                <tbody id="rosterTableBody">
+                  <!-- Roster populated here -->
+                </tbody>
+              </table>
+            </div>
+
+            <!-- Save / Finalize Footer -->
+            <div class="marking-footer">
+              <div class="info-note">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+                <span>Draft saves partial records without affecting percentages. Finalization requires 100% of eligible students to be marked.</span>
+              </div>
+              <div class="footer-actions">
+                <button id="saveDraftBtn" class="btn btn-secondary">Save as Draft</button>
+                <button id="finalizeAttendanceBtn" class="btn btn-success">Finalize Attendance</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 3. REPORTS TAB -->
+        <div id="reportsTab" class="tab-content">
+          <div class="content-header">
+            <div>
+              <h2>Section Attendance & Below 75% Tracker</h2>
+              <p>Server-side calculated statistics and regulatory compliance reporting.</p>
+            </div>
+            <div class="header-actions">
+              <div class="threshold-input-group">
+                <label>Threshold:</label>
+                <input type="number" id="thresholdInput" value="75" min="1" max="100" style="width: 70px;">
+                <span>%</span>
+                <button id="refreshReportBtn" class="btn btn-outline btn-sm">Refresh</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Section Picker -->
+          <div class="card mb-4">
+            <div class="form-group mb-0">
+              <label>Select Academic Section</label>
+              <select id="reportSectionSelect">
+                <!-- Sections -->
+              </select>
+            </div>
+          </div>
+
+          <!-- Section Summary Cards -->
+          <div class="stats-grid mb-4">
+            <div class="stat-card">
+              <div class="stat-label">Enrolled Students</div>
+              <div class="stat-value" id="statStudentCount">0</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-label">Section Overall Attendance</div>
+              <div class="stat-value text-primary" id="statAvgAttendance">0.0%</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-label">Below 75% Defaulters</div>
+              <div class="stat-value text-danger" id="statBelowCount">0</div>
+            </div>
+          </div>
+
+          <!-- Section Student Table -->
+          <div class="card mb-4">
+            <h3 class="card-title">Student Overall Attendance Roster</h3>
+            <div class="table-container">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Roll Number</th>
+                    <th>Student Name</th>
+                    <th>Classes Attended</th>
+                    <th>Classes Conducted</th>
+                    <th>Overall %</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody id="sectionReportTableBody">
+                  <tr><td colspan="6" class="loading">Select section to view...</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Below Threshold Defaulters Table -->
+          <div class="card">
+            <div class="card-header-flex">
+              <div>
+                <h3 class="card-title text-danger">Subject-Wise Attendance Below Threshold Alert</h3>
+                <p class="text-muted">Students requiring academic warning letters or attendance counseling.</p>
+              </div>
+              <button id="exportCsvBtn" class="btn btn-outline btn-sm">Export CSV</button>
+            </div>
+            <div class="table-container">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Roll Number</th>
+                    <th>Student Name</th>
+                    <th>Subject</th>
+                    <th>Conducted</th>
+                    <th>Attended</th>
+                    <th>Missed</th>
+                    <th>Attendance %</th>
+                  </tr>
+                </thead>
+                <tbody id="belowThresholdTableBody">
+                  <tr><td colspan="7" class="loading">Loading report...</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- 4. TIMETABLE TAB -->
+        <div id="timetableTab" class="tab-content">
+          <div class="content-header">
+            <div>
+              <h2>Recurring Weekly Timetable</h2>
+              <p>Schedule templates that automatically generate individual scheduled lectures.</p>
+            </div>
+            <div class="header-actions">
+              <select id="timetableSectionSelect">
+                <!-- Sections -->
+              </select>
+            </div>
+          </div>
+
+          <div class="table-container">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Day of Week</th>
+                  <th>Subject</th>
+                  <th>Start Time</th>
+                  <th>End Time</th>
+                  <th>Validity Period</th>
+                </tr>
+              </thead>
+              <tbody id="timetableTableBody">
+                <tr><td colspan="5" class="loading">Select section to view timetable...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- ============================================== -->
+      <!-- STUDENT VIEW -->
+      <!-- ============================================== -->
+      <div id="studentView" class="view-container hidden">
+        <div class="student-header card">
+          <div class="student-profile-flex">
+            <div>
+              <span class="text-muted">Logged in as:</span>
+              <h2 id="studentFullName">-</h2>
+              <p><span class="badge" id="studentRollBadge">ROLL</span> Section <strong id="studentSectionName">-</strong> &bull; <span id="studentYear">-</span></p>
+            </div>
+            <div class="student-overall-score">
+              <div class="score-circle">
+                <span id="studentOverallPct">0%</span>
+                <small>Overall</small>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Student Tabs -->
+        <div class="tabs-bar">
+          <button class="tab-btn active" data-tab="studentDashboardTab">My Attendance Breakdown</button>
+          <button class="tab-btn" data-tab="studentPredictorTab">Attendance Predictor</button>
+        </div>
+
+        <!-- 1. STUDENT BREAKDOWN -->
+        <div id="studentDashboardTab" class="tab-content active">
+          <div class="grid-cards" id="subjectCardsContainer">
+            <!-- Cards populated dynamically -->
+          </div>
+        </div>
+
+        <!-- 2. STUDENT PREDICTOR -->
+        <div id="studentPredictorTab" class="tab-content">
+          <div class="content-header">
+            <div>
+              <h2>Future Attendance Predictor</h2>
+              <p>Calculates attendance projections based on upcoming scheduled sessions from the weekly timetable.</p>
+            </div>
+          </div>
+
+          <div class="card mb-4">
+            <div class="grid-3">
+              <div class="form-group">
+                <label>Choose Subject</label>
+                <select id="predictorSubjectSelect">
+                  <!-- Subjects -->
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Prediction Horizon</label>
+                <select id="predictorDaysAhead">
+                  <option value="15">Next 15 Days</option>
+                  <option value="30" selected>Next 30 Days (Standard)</option>
+                  <option value="60">Next 60 Days</option>
+                </select>
+              </div>
+              <div class="form-group form-actions-align">
+                <button id="runPredictorBtn" class="btn btn-primary">Calculate Projection</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Predictor Output -->
+          <div id="predictorResults" class="hidden">
+            <div class="stats-grid mb-4">
+              <div class="stat-card">
+                <div class="stat-label">Conducted Classes (T)</div>
+                <div class="stat-value" id="predConducted">0</div>
+              </div>
+              <div class="stat-card">
+                <div class="stat-label">Attended Classes (P)</div>
+                <div class="stat-value text-success" id="predAttended">0</div>
+              </div>
+              <div class="stat-card">
+                <div class="stat-label">Upcoming Classes (K)</div>
+                <div class="stat-value text-primary" id="predUpcoming">0</div>
+              </div>
+              <div class="stat-card">
+                <div class="stat-label">Current %</div>
+                <div class="stat-value" id="predCurrentPct">0.0%</div>
+              </div>
+            </div>
+
+            <!-- Best & Worst Case Cards -->
+            <div class="grid-2 mb-4">
+              <div class="card prediction-card best-case">
+                <div class="case-header">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>
+                  <h4>If you attend ALL upcoming classes:</h4>
+                </div>
+                <div class="projected-number" id="predBestPct">0.0%</div>
+                <p class="text-muted">Formula: ((P + K) / (T + K)) &times; 100</p>
+              </div>
+
+              <div class="card prediction-card worst-case">
+                <div class="case-header">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 17 13.5 8.5 8.5 13.5 2 7"/><polyline points="16 17 22 17 22 11"/></svg>
+                  <h4>If you miss ALL upcoming classes:</h4>
+                </div>
+                <div class="projected-number text-danger" id="predWorstPct">0.0%</div>
+                <p class="text-muted">Formula: (P / (T + K)) &times; 100</p>
+              </div>
+            </div>
+
+            <!-- Scenario Simulator Slider -->
+            <div class="card scenario-simulator">
+              <h3>Interactive Scenario Simulator</h3>
+              <p class="text-muted">Test how attending a custom number of upcoming classes affects your overall standing.</p>
+              <div class="slider-wrapper">
+                <label>I plan to attend <strong id="sliderValue">0</strong> of <span id="sliderMax">0</span> sessions:</label>
+                <input type="range" id="scenarioSlider" min="0" max="10" value="0">
+              </div>
+              <div class="simulator-result">
+                <span>Your Projected Attendance:</span>
+                <span class="result-highlight" id="scenarioProjectedPct">0.0%</span>
+                <span class="threshold-pill" id="scenarioThresholdPill">ELIGIBLE</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ============================================== -->
+      <!-- MODALS: CREATE SESSION & GENERATE -->
+      <!-- ============================================== -->
+      <!-- Create Session Modal -->
+      <div id="createSessionModal" class="modal-overlay hidden">
+        <div class="modal-card">
+          <div class="modal-header">
+            <h3>Schedule Class Session</h3>
+            <button class="close-btn" id="closeCreateSessionModal">&times;</button>
+          </div>
+          <form id="createSessionForm">
+            <div class="form-group">
+              <label>Section</label>
+              <select id="modalSessionSection" required></select>
+            </div>
+            <div class="form-group">
+              <label>Subject</label>
+              <select id="modalSessionSubject" required></select>
+            </div>
+            <div class="form-group">
+              <label>Lecture Date</label>
+              <input type="date" id="modalSessionDate" required>
+            </div>
+            <div class="grid-2">
+              <div class="form-group">
+                <label>Start Time</label>
+                <input type="time" id="modalSessionStart" value="10:00" required>
+              </div>
+              <div class="form-group">
+                <label>End Time</label>
+                <input type="time" id="modalSessionEnd" value="11:00" required>
+              </div>
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-outline" id="cancelCreateSessionBtn">Cancel</button>
+              <button type="submit" class="btn btn-primary">Create Session</button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <!-- Generate from Timetable Modal -->
+      <div id="generateModal" class="modal-overlay hidden">
+        <div class="modal-card">
+          <div class="modal-header">
+            <h3>Generate Sessions from Weekly Timetable</h3>
+            <button class="close-btn" id="closeGenerateModal">&times;</button>
+          </div>
+          <form id="generateForm">
+            <div class="form-group">
+              <label>Section</label>
+              <select id="modalGenSection" required></select>
+            </div>
+            <div class="form-group">
+              <label>Generation Range</label>
+              <select id="modalGenDays" required>
+                <option value="7">Next 7 Days (1 Week)</option>
+                <option value="14">Next 14 Days (2 Weeks)</option>
+                <option value="30" selected>Next 30 Days (1 Month)</option>
+                <option value="60">Next 60 Days (2 Months)</option>
+              </select>
+            </div>
+            <p class="text-muted text-sm">
+              &bull; Idempotent: existing sessions will not be duplicated.<br>
+              &bull; University holidays are automatically excluded.<br>
+              &bull; Sessions will be created in <strong>SCHEDULED</strong> status.
+            </p>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-outline" id="cancelGenerateBtn">Cancel</button>
+              <button type="submit" class="btn btn-primary">Run Generation</button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <!-- Cancel Session Modal -->
+      <div id="cancelModal" class="modal-overlay hidden">
+        <div class="modal-card">
+          <div class="modal-header">
+            <h3 class="text-danger">Cancel Class Session</h3>
+            <button class="close-btn" id="closeCancelModal">&times;</button>
+          </div>
+          <form id="cancelForm">
+            <input type="hidden" id="cancelSessionId">
+            <p>Are you sure you want to cancel this lecture? Cancelled sessions will be excluded from attendance denominators.</p>
+            <div class="form-group">
+              <label>Cancellation Reason</label>
+              <input type="text" id="cancelReasonInput" placeholder="e.g. Faculty medical leave, University sports day" required>
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-outline" id="abortCancelBtn">Keep Session</button>
+              <button type="submit" class="btn btn-danger">Confirm Cancellation</button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <!-- Edit Finalized Attendance Modal -->
+      <div id="editFinalizedModal" class="modal-overlay hidden">
+        <div class="modal-card">
+          <div class="modal-header">
+            <h3>Modify Finalized Attendance Record</h3>
+            <button class="close-btn" id="closeEditModal">&times;</button>
+          </div>
+          <form id="editRecordForm">
+            <input type="hidden" id="editRecordId">
+            <div class="form-group">
+              <label>Student</label>
+              <input type="text" id="editStudentName" disabled>
+            </div>
+            <div class="form-group">
+              <label>New Status</label>
+              <select id="editStatusSelect">
+                <option value="PRESENT">PRESENT</option>
+                <option value="ABSENT">ABSENT</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Modification Reason (Mandatory Audit Trail)</label>
+              <input type="text" id="editReasonInput" placeholder="e.g. Medical certificate verified, OD approval" required>
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-outline" id="cancelEditBtn">Cancel</button>
+              <button type="submit" class="btn btn-primary">Save Modification</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
