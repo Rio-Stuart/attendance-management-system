@@ -14,8 +14,8 @@ INSERT INTO users (username, password_hash, full_name, email, role) VALUES
 
 -- ---- Sections ----
 INSERT INTO sections (section_name, academic_year) VALUES
-('25BCS801', '2025-2026'),
-('25BCS802', '2025-2026');
+('25BCS801', '2026-2027'),
+('25BCS802', '2026-2027');
 
 -- ---- Subjects ----
 INSERT INTO subjects (subject_code, subject_name) VALUES
@@ -37,71 +37,73 @@ INSERT INTO section_subjects (section_id, subject_id) VALUES
 -- ---- Student enrollments ----
 -- Students 1-3 in 25BCS801, Students 4-5 in 25BCS802
 INSERT INTO student_section_enrollments (student_id, section_id, academic_year, start_date, status) VALUES
-(3, 1, '2025-2026', '2025-08-01', 'ACTIVE'),   -- Aarav  → 25BCS801  (sse_id=1)
-(4, 1, '2025-2026', '2025-08-01', 'ACTIVE'),   -- Priya  → 25BCS801  (sse_id=2)
-(5, 1, '2025-2026', '2025-08-01', 'ACTIVE'),   -- Rohan  → 25BCS801  (sse_id=3)
-(6, 2, '2025-2026', '2025-08-01', 'ACTIVE'),   -- Sneha  → 25BCS802  (sse_id=4)
-(7, 2, '2025-2026', '2025-08-01', 'ACTIVE');   -- Vikram → 25BCS802  (sse_id=5)
+(3, 1, '2026-2027', '2026-08-01', 'ACTIVE'),   -- Aarav  → 25BCS801  (sse_id=1)
+(4, 1, '2026-2027', '2026-08-01', 'ACTIVE'),   -- Priya  → 25BCS801  (sse_id=2)
+(5, 1, '2026-2027', '2026-08-01', 'ACTIVE'),   -- Rohan  → 25BCS801  (sse_id=3)
+(6, 2, '2026-2027', '2026-08-01', 'ACTIVE'),   -- Sneha  → 25BCS802  (sse_id=4)
+(7, 2, '2026-2027', '2026-08-01', 'ACTIVE');   -- Vikram → 25BCS802  (sse_id=5)
 
 -- ---- Weekly timetable entries ----
 INSERT INTO weekly_timetable (section_subject_id, day_of_week, start_time, end_time, valid_from, valid_to) VALUES
-(1, 'MONDAY',    '09:00', '10:00', '2025-08-01', '2026-05-31'),  -- 25BCS801 DBMS Mon
-(1, 'WEDNESDAY', '09:00', '10:00', '2025-08-01', '2026-05-31'),  -- 25BCS801 DBMS Wed
-(2, 'TUESDAY',   '10:00', '11:00', '2025-08-01', '2026-05-31'),  -- 25BCS801 OOPS Tue
-(2, 'THURSDAY',  '10:00', '11:00', '2025-08-01', '2026-05-31'),  -- 25BCS801 OOPS Thu
-(3, 'FRIDAY',    '11:00', '12:00', '2025-08-01', '2026-05-31'),  -- 25BCS801 OS Fri
-(4, 'MONDAY',    '11:00', '12:00', '2025-08-01', '2026-05-31'),  -- 25BCS802 DBMS Mon
-(5, 'WEDNESDAY', '14:00', '15:00', '2025-08-01', '2026-05-31'),  -- 25BCS802 OOPS Wed
-(6, 'FRIDAY',    '14:00', '15:00', '2025-08-01', '2026-05-31');  -- 25BCS802 OS Fri
+(1, 'MONDAY',    '09:00', '10:00', '2026-08-01', '2027-05-31'),  -- 25BCS801 DBMS Mon
+(1, 'WEDNESDAY', '09:00', '10:00', '2026-08-01', '2027-05-31'),  -- 25BCS801 DBMS Wed
+(2, 'TUESDAY',   '10:00', '11:00', '2026-08-01', '2027-05-31'),  -- 25BCS801 OOPS Tue
+(2, 'THURSDAY',  '10:00', '11:00', '2026-08-01', '2027-05-31'),  -- 25BCS801 OOPS Thu
+(3, 'FRIDAY',    '11:00', '12:00', '2026-08-01', '2027-05-31'),  -- 25BCS801 OS Fri
+(4, 'MONDAY',    '11:00', '12:00', '2026-08-01', '2027-05-31'),  -- 25BCS802 DBMS Mon
+(5, 'WEDNESDAY', '14:00', '15:00', '2026-08-01', '2027-05-31'),  -- 25BCS802 OOPS Wed
+(6, 'FRIDAY',    '14:00', '15:00', '2026-08-01', '2027-05-31');  -- 25BCS802 OS Fri
 
 -- ---- University holidays ----
 INSERT INTO university_holidays (holiday_date, description) VALUES
-('2025-08-15', 'Independence Day'),
-('2025-10-02', 'Gandhi Jayanti'),
-('2025-10-24', 'Dussehra'),
-('2025-11-01', 'Diwali'),
-('2025-12-25', 'Christmas'),
-('2026-01-26', 'Republic Day');
+('2026-08-15', 'Independence Day'),
+('2026-10-02', 'Gandhi Jayanti'),
+('2026-10-24', 'Dussehra'),
+('2026-11-01', 'Diwali'),
+('2026-12-25', 'Christmas'),
+('2027-01-26', 'Republic Day');
 
 -- ---- Class sessions (various statuses) ----
--- FINALIZED sessions (25BCS801 DBMS — Mon 4 Aug, Wed 6 Aug)
-INSERT INTO class_sessions (section_subject_id, section_id, timetable_entry_id, session_date, start_time, end_time, status, created_by, finalized_by, finalized_at) VALUES
-(1, 1, 1, '2025-08-04', '09:00', '10:00', 'FINALIZED', 1, 1, '2025-08-04 10:05:00'),  -- cs_id=1
-(1, 1, 2, '2025-08-06', '09:00', '10:00', 'FINALIZED', 1, 1, '2025-08-06 10:05:00');  -- cs_id=2
-
--- SCHEDULED session (25BCS801 OOPS — Tue 5 Aug)
-INSERT INTO class_sessions (section_subject_id, section_id, timetable_entry_id, session_date, start_time, end_time, status, created_by) VALUES
-(2, 1, 3, '2025-08-05', '10:00', '11:00', 'SCHEDULED', 1);  -- cs_id=3
-
--- DRAFT session (25BCS801 OOPS — Thu 7 Aug)
-INSERT INTO class_sessions (section_subject_id, section_id, timetable_entry_id, session_date, start_time, end_time, status, created_by) VALUES
-(2, 1, 4, '2025-08-07', '10:00', '11:00', 'DRAFT', 1);  -- cs_id=4
-
--- CANCELLED session (25BCS801 OS — Fri 8 Aug)
-INSERT INTO class_sessions (section_subject_id, section_id, timetable_entry_id, session_date, start_time, end_time, status, created_by, cancellation_reason) VALUES
-(3, 1, 5, '2025-08-08', '11:00', '12:00', 'CANCELLED', 1, 'Professor on leave');  -- cs_id=5
-
--- FINALIZED session for 25BCS802 DBMS — Mon 4 Aug
-INSERT INTO class_sessions (section_subject_id, section_id, timetable_entry_id, session_date, start_time, end_time, status, created_by, finalized_by, finalized_at) VALUES
-(4, 2, 6, '2025-08-04', '11:00', '12:00', 'FINALIZED', 2, 2, '2025-08-04 12:05:00');  -- cs_id=6
+-- DBMS (ss1) Finalized Sessions
+INSERT INTO class_sessions (id, section_subject_id, section_id, timetable_entry_id, session_date, start_time, end_time, status, created_by, finalized_by, finalized_at) VALUES
+(1, 1, 1, 1, '2026-08-03', '09:00', '10:00', 'FINALIZED', 1, 1, '2026-08-03 10:05:00'),
+(2, 1, 1, 2, '2026-08-05', '09:00', '10:00', 'FINALIZED', 1, 1, '2026-08-05 10:05:00'),
+(3, 1, 1, 1, '2026-08-10', '09:00', '10:00', 'FINALIZED', 1, 1, '2026-08-10 10:05:00'),
+(4, 1, 1, 2, '2026-08-12', '09:00', '10:00', 'FINALIZED', 1, 1, '2026-08-12 10:05:00'),
+(5, 1, 1, 1, '2026-08-17', '09:00', '10:00', 'FINALIZED', 1, 1, '2026-08-17 10:05:00'),
+(6, 1, 1, 2, '2026-08-19', '09:00', '10:00', 'FINALIZED', 1, 1, '2026-08-19 10:05:00'),
+-- OOPS (ss2) Finalized Sessions
+(7, 2, 1, 3, '2026-08-04', '10:00', '11:00', 'FINALIZED', 1, 1, '2026-08-04 11:05:00'),
+(8, 2, 1, 4, '2026-08-06', '10:00', '11:00', 'FINALIZED', 1, 1, '2026-08-06 11:05:00'),
+(9, 2, 1, 3, '2026-08-11', '10:00', '11:00', 'FINALIZED', 1, 1, '2026-08-11 11:05:00'),
+(10, 2, 1, 4, '2026-08-13', '10:00', '11:00', 'FINALIZED', 1, 1, '2026-08-13 11:05:00'),
+(11, 2, 1, 3, '2026-08-18', '10:00', '11:00', 'FINALIZED', 1, 1, '2026-08-18 11:05:00'),
+-- OS (ss3) Finalized Sessions
+(12, 3, 1, 5, '2026-08-07', '11:00', '12:00', 'FINALIZED', 1, 1, '2026-08-07 12:05:00'),
+(13, 3, 1, 5, '2026-08-14', '11:00', '12:00', 'FINALIZED', 1, 1, '2026-08-14 12:05:00'),
+(14, 3, 1, 5, '2026-08-21', '11:00', '12:00', 'FINALIZED', 1, 1, '2026-08-21 12:05:00'),
+(15, 3, 1, 5, '2026-08-28', '11:00', '12:00', 'FINALIZED', 1, 1, '2026-08-28 12:05:00');
 
 -- ---- Attendance records (for FINALIZED sessions only) ----
--- Session 1 (25BCS801 DBMS Mon 4 Aug) — 3 students
 INSERT INTO attendance_records (class_session_id, student_section_enrollment_id, student_id, section_id, attendance_status, marked_by) VALUES
-(1, 1, 3, 1, 'PRESENT', 1),  -- Aarav present
-(1, 2, 4, 1, 'PRESENT', 1),  -- Priya present
-(1, 3, 5, 1, 'ABSENT',  1);  -- Rohan absent
-
--- Session 2 (25BCS801 DBMS Wed 6 Aug) — 3 students
-INSERT INTO attendance_records (class_session_id, student_section_enrollment_id, student_id, section_id, attendance_status, marked_by) VALUES
-(2, 1, 3, 1, 'PRESENT', 1),  -- Aarav present
-(2, 2, 4, 1, 'ABSENT',  1),  -- Priya absent
-(2, 3, 5, 1, 'PRESENT', 1);  -- Rohan present
-
--- Session 6 (25BCS802 DBMS Mon 4 Aug) — 2 students
-INSERT INTO attendance_records (class_session_id, student_section_enrollment_id, student_id, section_id, attendance_status, marked_by) VALUES
-(6, 4, 6, 2, 'PRESENT', 2),  -- Sneha present
-(6, 5, 7, 2, 'PRESENT', 2);  -- Vikram present
+-- DBMS (CS1 - CS6)
+(1, 1, 3, 1, 'PRESENT', 1), (1, 2, 4, 1, 'PRESENT', 1), (1, 3, 5, 1, 'ABSENT', 1),
+(2, 1, 3, 1, 'PRESENT', 1), (2, 2, 4, 1, 'ABSENT', 1), (2, 3, 5, 1, 'PRESENT', 1),
+(3, 1, 3, 1, 'PRESENT', 1), (3, 2, 4, 1, 'PRESENT', 1), (3, 3, 5, 1, 'PRESENT', 1),
+(4, 1, 3, 1, 'ABSENT', 1), (4, 2, 4, 1, 'PRESENT', 1), (4, 3, 5, 1, 'PRESENT', 1),
+(5, 1, 3, 1, 'PRESENT', 1), (5, 2, 4, 1, 'PRESENT', 1), (5, 3, 5, 1, 'ABSENT', 1),
+(6, 1, 3, 1, 'PRESENT', 1), (6, 2, 4, 1, 'ABSENT', 1), (6, 3, 5, 1, 'PRESENT', 1),
+-- OOPS (CS7 - CS11)
+(7, 1, 3, 1, 'PRESENT', 1), (7, 2, 4, 1, 'PRESENT', 1), (7, 3, 5, 1, 'PRESENT', 1),
+(8, 1, 3, 1, 'ABSENT', 1), (8, 2, 4, 1, 'PRESENT', 1), (8, 3, 5, 1, 'ABSENT', 1),
+(9, 1, 3, 1, 'PRESENT', 1), (9, 2, 4, 1, 'ABSENT', 1), (9, 3, 5, 1, 'PRESENT', 1),
+(10, 1, 3, 1, 'ABSENT', 1), (10, 2, 4, 1, 'PRESENT', 1), (10, 3, 5, 1, 'PRESENT', 1),
+(11, 1, 3, 1, 'PRESENT', 1), (11, 2, 4, 1, 'PRESENT', 1), (11, 3, 5, 1, 'ABSENT', 1),
+-- OS (CS12 - CS15)
+(12, 1, 3, 1, 'PRESENT', 1), (12, 2, 4, 1, 'PRESENT', 1), (12, 3, 5, 1, 'PRESENT', 1),
+(13, 1, 3, 1, 'PRESENT', 1), (13, 2, 4, 1, 'PRESENT', 1), (13, 3, 5, 1, 'ABSENT', 1),
+(14, 1, 3, 1, 'PRESENT', 1), (14, 2, 4, 1, 'ABSENT', 1), (14, 3, 5, 1, 'PRESENT', 1),
+(15, 1, 3, 1, 'ABSENT', 1), (15, 2, 4, 1, 'PRESENT', 1), (15, 3, 5, 1, 'PRESENT', 1);
 
 -- ---- Audit log sample (Rohan's status corrected in session 1) ----
 INSERT INTO attendance_audit_log (attendance_record_id, previous_status, new_status, changed_by, reason) VALUES

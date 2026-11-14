@@ -68,28 +68,47 @@ INSERT INTO university_holidays (holiday_date, description) VALUES
 ON CONFLICT (holiday_date) DO NOTHING;
 
 -- Sample Class Sessions
--- 1. FINALIZED session (25BCS801 DBMS Mon 4 Aug)
-INSERT INTO class_sessions (section_subject_id, section_id, timetable_entry_id, session_date, start_time, end_time, status, created_by, finalized_by, finalized_at) VALUES
-(1, 1, 1, '2026-08-04', '09:00', '10:00', 'FINALIZED', 1, 1, '2026-08-04 10:05:00'),
--- 2. FINALIZED session (25BCS801 DBMS Wed 6 Aug)
-(1, 1, 2, '2026-08-06', '09:00', '10:00', 'FINALIZED', 1, 1, '2026-08-06 10:05:00'),
--- 3. SCHEDULED session (25BCS801 OOPS Tue 17 Nov)
-(2, 1, 3, '2026-11-17', '10:00', '11:00', 'SCHEDULED', 1, NULL, NULL),
--- 4. DRAFT session (25BCS801 OOPS Thu 19 Nov)
-(2, 1, 4, '2026-11-19', '10:00', '11:00', 'DRAFT', 1, NULL, NULL),
--- 5. CANCELLED session (25BCS801 OS Fri 20 Nov)
-(3, 1, 5, '2026-11-20', '11:00', '12:00', 'CANCELLED', 1, NULL, NULL)
+-- DBMS (ss1) Finalized Sessions
+INSERT INTO class_sessions (id, section_subject_id, section_id, timetable_entry_id, session_date, start_time, end_time, status, created_by, finalized_by, finalized_at) VALUES
+(1, 1, 1, 1, '2026-08-03', '09:00', '10:00', 'FINALIZED', 1, 1, '2026-08-03 10:05:00'),
+(2, 1, 1, 2, '2026-08-05', '09:00', '10:00', 'FINALIZED', 1, 1, '2026-08-05 10:05:00'),
+(3, 1, 1, 1, '2026-08-10', '09:00', '10:00', 'FINALIZED', 1, 1, '2026-08-10 10:05:00'),
+(4, 1, 1, 2, '2026-08-12', '09:00', '10:00', 'FINALIZED', 1, 1, '2026-08-12 10:05:00'),
+(5, 1, 1, 1, '2026-08-17', '09:00', '10:00', 'FINALIZED', 1, 1, '2026-08-17 10:05:00'),
+(6, 1, 1, 2, '2026-08-19', '09:00', '10:00', 'FINALIZED', 1, 1, '2026-08-19 10:05:00'),
+-- OOPS (ss2) Finalized Sessions
+(7, 2, 1, 3, '2026-08-04', '10:00', '11:00', 'FINALIZED', 1, 1, '2026-08-04 11:05:00'),
+(8, 2, 1, 4, '2026-08-06', '10:00', '11:00', 'FINALIZED', 1, 1, '2026-08-06 11:05:00'),
+(9, 2, 1, 3, '2026-08-11', '10:00', '11:00', 'FINALIZED', 1, 1, '2026-08-11 11:05:00'),
+(10, 2, 1, 4, '2026-08-13', '10:00', '11:00', 'FINALIZED', 1, 1, '2026-08-13 11:05:00'),
+(11, 2, 1, 3, '2026-08-18', '10:00', '11:00', 'FINALIZED', 1, 1, '2026-08-18 11:05:00'),
+-- OS (ss3) Finalized Sessions
+(12, 3, 1, 5, '2026-08-07', '11:00', '12:00', 'FINALIZED', 1, 1, '2026-08-07 12:05:00'),
+(13, 3, 1, 5, '2026-08-14', '11:00', '12:00', 'FINALIZED', 1, 1, '2026-08-14 12:05:00'),
+(14, 3, 1, 5, '2026-08-21', '11:00', '12:00', 'FINALIZED', 1, 1, '2026-08-21 12:05:00'),
+(15, 3, 1, 5, '2026-08-28', '11:00', '12:00', 'FINALIZED', 1, 1, '2026-08-28 12:05:00')
 ON CONFLICT (section_subject_id, session_date, start_time) DO NOTHING;
 
--- Attendance Records for Finalized Session 1 (all 3 students)
+-- Attendance Records for Finalized Sessions (Aarav=id 3, Priya=id 4, Rohan=id 5)
 INSERT INTO attendance_records (class_session_id, student_section_enrollment_id, student_id, section_id, attendance_status, marked_by) VALUES
-(1, 1, 3, 1, 'PRESENT', 1),
-(1, 2, 4, 1, 'PRESENT', 1),
-(1, 3, 5, 1, 'ABSENT',  1),
--- Attendance Records for Finalized Session 2 (all 3 students)
-(2, 1, 3, 1, 'PRESENT', 1),
-(2, 2, 4, 1, 'ABSENT',  1),
-(2, 3, 5, 1, 'PRESENT', 1)
+-- DBMS (CS1 - CS6)
+(1, 1, 3, 1, 'PRESENT', 1), (1, 2, 4, 1, 'PRESENT', 1), (1, 3, 5, 1, 'ABSENT', 1),
+(2, 1, 3, 1, 'PRESENT', 1), (2, 2, 4, 1, 'ABSENT', 1), (2, 3, 5, 1, 'PRESENT', 1),
+(3, 1, 3, 1, 'PRESENT', 1), (3, 2, 4, 1, 'PRESENT', 1), (3, 3, 5, 1, 'PRESENT', 1),
+(4, 1, 3, 1, 'ABSENT', 1), (4, 2, 4, 1, 'PRESENT', 1), (4, 3, 5, 1, 'PRESENT', 1),
+(5, 1, 3, 1, 'PRESENT', 1), (5, 2, 4, 1, 'PRESENT', 1), (5, 3, 5, 1, 'ABSENT', 1),
+(6, 1, 3, 1, 'PRESENT', 1), (6, 2, 4, 1, 'ABSENT', 1), (6, 3, 5, 1, 'PRESENT', 1),
+-- OOPS (CS7 - CS11)
+(7, 1, 3, 1, 'PRESENT', 1), (7, 2, 4, 1, 'PRESENT', 1), (7, 3, 5, 1, 'PRESENT', 1),
+(8, 1, 3, 1, 'ABSENT', 1), (8, 2, 4, 1, 'PRESENT', 1), (8, 3, 5, 1, 'ABSENT', 1),
+(9, 1, 3, 1, 'PRESENT', 1), (9, 2, 4, 1, 'ABSENT', 1), (9, 3, 5, 1, 'PRESENT', 1),
+(10, 1, 3, 1, 'ABSENT', 1), (10, 2, 4, 1, 'PRESENT', 1), (10, 3, 5, 1, 'PRESENT', 1),
+(11, 1, 3, 1, 'PRESENT', 1), (11, 2, 4, 1, 'PRESENT', 1), (11, 3, 5, 1, 'ABSENT', 1),
+-- OS (CS12 - CS15)
+(12, 1, 3, 1, 'PRESENT', 1), (12, 2, 4, 1, 'PRESENT', 1), (12, 3, 5, 1, 'PRESENT', 1),
+(13, 1, 3, 1, 'PRESENT', 1), (13, 2, 4, 1, 'PRESENT', 1), (13, 3, 5, 1, 'ABSENT', 1),
+(14, 1, 3, 1, 'PRESENT', 1), (14, 2, 4, 1, 'ABSENT', 1), (14, 3, 5, 1, 'PRESENT', 1),
+(15, 1, 3, 1, 'ABSENT', 1), (15, 2, 4, 1, 'PRESENT', 1), (15, 3, 5, 1, 'PRESENT', 1)
 ON CONFLICT (class_session_id, student_section_enrollment_id) DO NOTHING;
 
 -- Audit log

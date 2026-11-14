@@ -86,65 +86,94 @@ class AttendanceDB {
     this.addHoliday({ holiday_date: '2026-12-25', description: 'Christmas' });
     this.addHoliday({ holiday_date: '2027-01-26', description: 'Republic Day' });
 
-    // 8. Class Sessions
-    // Session 1: FINALIZED (25BCS801 - DBMS - Mon 4 Aug)
+    // 8. Class Sessions & Full Subject Historical Records
+    // --- DBMS (CS401, ss1) Finalized Sessions ---
     const cs1 = this.addClassSession({
-      section_subject_id: ss1.id,
-      section_id: s1.id,
-      timetable_entry_id: 1,
-      session_date: '2026-08-04',
-      start_time: '09:00',
-      end_time: '10:00',
-      status: 'FINALIZED',
-      created_by: 1,
-      finalized_by: 1,
-      finalized_at: '2026-08-04 10:05:00'
+      section_subject_id: ss1.id, section_id: s1.id, timetable_entry_id: 1,
+      session_date: '2026-08-03', start_time: '09:00', end_time: '10:00',
+      status: 'FINALIZED', created_by: 1, finalized_by: 1, finalized_at: '2026-08-03 10:05:00'
     });
-
-    // Session 2: FINALIZED (25BCS801 - DBMS - Wed 6 Aug)
     const cs2 = this.addClassSession({
-      section_subject_id: ss1.id,
-      section_id: s1.id,
-      timetable_entry_id: 2,
-      session_date: '2026-08-06',
-      start_time: '09:00',
-      end_time: '10:00',
-      status: 'FINALIZED',
-      created_by: 1,
-      finalized_by: 1,
-      finalized_at: '2026-08-06 10:05:00'
+      section_subject_id: ss1.id, section_id: s1.id, timetable_entry_id: 2,
+      session_date: '2026-08-05', start_time: '09:00', end_time: '10:00',
+      status: 'FINALIZED', created_by: 1, finalized_by: 1, finalized_at: '2026-08-05 10:05:00'
     });
-
-    // Session 3: SCHEDULED (25BCS801 - OOPS - Tue 5 Aug)
-    this.addClassSession({
-      section_subject_id: ss2.id,
-      section_id: s1.id,
-      timetable_entry_id: 3,
-      session_date: '2026-11-17',
-      start_time: '10:00',
-      end_time: '11:00',
-      status: 'SCHEDULED',
-      created_by: 1
+    const cs3 = this.addClassSession({
+      section_subject_id: ss1.id, section_id: s1.id, timetable_entry_id: 1,
+      session_date: '2026-08-10', start_time: '09:00', end_time: '10:00',
+      status: 'FINALIZED', created_by: 1, finalized_by: 1, finalized_at: '2026-08-10 10:05:00'
     });
-
-    // Session 4: DRAFT (25BCS801 - OOPS - Thu 7 Aug)
     const cs4 = this.addClassSession({
-      section_subject_id: ss2.id,
-      section_id: s1.id,
-      timetable_entry_id: 4,
-      session_date: '2026-11-19',
-      start_time: '10:00',
-      end_time: '11:00',
-      status: 'DRAFT',
-      created_by: 1
+      section_subject_id: ss1.id, section_id: s1.id, timetable_entry_id: 2,
+      session_date: '2026-08-12', start_time: '09:00', end_time: '10:00',
+      status: 'FINALIZED', created_by: 1, finalized_by: 1, finalized_at: '2026-08-12 10:05:00'
+    });
+    const cs5 = this.addClassSession({
+      section_subject_id: ss1.id, section_id: s1.id, timetable_entry_id: 1,
+      session_date: '2026-08-17', start_time: '09:00', end_time: '10:00',
+      status: 'FINALIZED', created_by: 1, finalized_by: 1, finalized_at: '2026-08-17 10:05:00'
+    });
+    const cs6 = this.addClassSession({
+      section_subject_id: ss1.id, section_id: s1.id, timetable_entry_id: 2,
+      session_date: '2026-08-19', start_time: '09:00', end_time: '10:00',
+      status: 'FINALIZED', created_by: 1, finalized_by: 1, finalized_at: '2026-08-19 10:05:00'
     });
 
-    // Session 5: CANCELLED (25BCS801 - OS - Fri 8 Aug)
+    // --- OOPS (CS402, ss2) Finalized Sessions ---
+    const cs7 = this.addClassSession({
+      section_subject_id: ss2.id, section_id: s1.id, timetable_entry_id: 3,
+      session_date: '2026-08-04', start_time: '10:00', end_time: '11:00',
+      status: 'FINALIZED', created_by: 1, finalized_by: 1, finalized_at: '2026-08-04 11:05:00'
+    });
+    const cs8 = this.addClassSession({
+      section_subject_id: ss2.id, section_id: s1.id, timetable_entry_id: 4,
+      session_date: '2026-08-06', start_time: '10:00', end_time: '11:00',
+      status: 'FINALIZED', created_by: 1, finalized_by: 1, finalized_at: '2026-08-06 11:05:00'
+    });
+    const cs9 = this.addClassSession({
+      section_subject_id: ss2.id, section_id: s1.id, timetable_entry_id: 3,
+      session_date: '2026-08-11', start_time: '10:00', end_time: '11:00',
+      status: 'FINALIZED', created_by: 1, finalized_by: 1, finalized_at: '2026-08-11 11:05:00'
+    });
+    const cs10 = this.addClassSession({
+      section_subject_id: ss2.id, section_id: s1.id, timetable_entry_id: 4,
+      session_date: '2026-08-13', start_time: '10:00', end_time: '11:00',
+      status: 'FINALIZED', created_by: 1, finalized_by: 1, finalized_at: '2026-08-13 11:05:00'
+    });
+    const cs11 = this.addClassSession({
+      section_subject_id: ss2.id, section_id: s1.id, timetable_entry_id: 3,
+      session_date: '2026-08-18', start_time: '10:00', end_time: '11:00',
+      status: 'FINALIZED', created_by: 1, finalized_by: 1, finalized_at: '2026-08-18 11:05:00'
+    });
+
+    // --- OS (CS403, ss3) Finalized Sessions ---
+    const cs12 = this.addClassSession({
+      section_subject_id: ss3.id, section_id: s1.id, timetable_entry_id: 5,
+      session_date: '2026-08-07', start_time: '11:00', end_time: '12:00',
+      status: 'FINALIZED', created_by: 1, finalized_by: 1, finalized_at: '2026-08-07 12:05:00'
+    });
+    const cs13 = this.addClassSession({
+      section_subject_id: ss3.id, section_id: s1.id, timetable_entry_id: 5,
+      session_date: '2026-08-14', start_time: '11:00', end_time: '12:00',
+      status: 'FINALIZED', created_by: 1, finalized_by: 1, finalized_at: '2026-08-14 12:05:00'
+    });
+    const cs14 = this.addClassSession({
+      section_subject_id: ss3.id, section_id: s1.id, timetable_entry_id: 5,
+      session_date: '2026-08-21', start_time: '11:00', end_time: '12:00',
+      status: 'FINALIZED', created_by: 1, finalized_by: 1, finalized_at: '2026-08-21 12:05:00'
+    });
+    const cs15 = this.addClassSession({
+      section_subject_id: ss3.id, section_id: s1.id, timetable_entry_id: 5,
+      session_date: '2026-08-28', start_time: '11:00', end_time: '12:00',
+      status: 'FINALIZED', created_by: 1, finalized_by: 1, finalized_at: '2026-08-28 12:05:00'
+    });
+
+    // Cancelled and Draft Sessions
     this.addClassSession({
       section_subject_id: ss3.id,
       section_id: s1.id,
       timetable_entry_id: 5,
-      session_date: '2026-11-20',
+      session_date: '2026-09-04',
       start_time: '11:00',
       end_time: '12:00',
       status: 'CANCELLED',
@@ -152,19 +181,71 @@ class AttendanceDB {
       cancellation_reason: 'Faculty on academic conference'
     });
 
-    // 9. Attendance records for finalized session 1
+    // 9. Attendance records for DBMS (CS401)
+    // CS1
     this.addAttendanceRecord({ class_session_id: cs1.id, student_section_enrollment_id: e1.id, student_id: 3, section_id: s1.id, attendance_status: 'PRESENT', marked_by: 1 });
     this.addAttendanceRecord({ class_session_id: cs1.id, student_section_enrollment_id: e2.id, student_id: 4, section_id: s1.id, attendance_status: 'PRESENT', marked_by: 1 });
     this.addAttendanceRecord({ class_session_id: cs1.id, student_section_enrollment_id: e3.id, student_id: 5, section_id: s1.id, attendance_status: 'ABSENT', marked_by: 1 });
-
-    // Attendance records for finalized session 2
+    // CS2
     this.addAttendanceRecord({ class_session_id: cs2.id, student_section_enrollment_id: e1.id, student_id: 3, section_id: s1.id, attendance_status: 'PRESENT', marked_by: 1 });
     this.addAttendanceRecord({ class_session_id: cs2.id, student_section_enrollment_id: e2.id, student_id: 4, section_id: s1.id, attendance_status: 'ABSENT', marked_by: 1 });
     this.addAttendanceRecord({ class_session_id: cs2.id, student_section_enrollment_id: e3.id, student_id: 5, section_id: s1.id, attendance_status: 'PRESENT', marked_by: 1 });
-
-    // Draft records for session 4 (partial)
-    this.addAttendanceRecord({ class_session_id: cs4.id, student_section_enrollment_id: e1.id, student_id: 3, section_id: s1.id, attendance_status: 'PRESENT', marked_by: 1 });
+    // CS3
+    this.addAttendanceRecord({ class_session_id: cs3.id, student_section_enrollment_id: e1.id, student_id: 3, section_id: s1.id, attendance_status: 'PRESENT', marked_by: 1 });
+    this.addAttendanceRecord({ class_session_id: cs3.id, student_section_enrollment_id: e2.id, student_id: 4, section_id: s1.id, attendance_status: 'PRESENT', marked_by: 1 });
+    this.addAttendanceRecord({ class_session_id: cs3.id, student_section_enrollment_id: e3.id, student_id: 5, section_id: s1.id, attendance_status: 'PRESENT', marked_by: 1 });
+    // CS4
+    this.addAttendanceRecord({ class_session_id: cs4.id, student_section_enrollment_id: e1.id, student_id: 3, section_id: s1.id, attendance_status: 'ABSENT', marked_by: 1 });
     this.addAttendanceRecord({ class_session_id: cs4.id, student_section_enrollment_id: e2.id, student_id: 4, section_id: s1.id, attendance_status: 'PRESENT', marked_by: 1 });
+    this.addAttendanceRecord({ class_session_id: cs4.id, student_section_enrollment_id: e3.id, student_id: 5, section_id: s1.id, attendance_status: 'PRESENT', marked_by: 1 });
+    // CS5
+    this.addAttendanceRecord({ class_session_id: cs5.id, student_section_enrollment_id: e1.id, student_id: 3, section_id: s1.id, attendance_status: 'PRESENT', marked_by: 1 });
+    this.addAttendanceRecord({ class_session_id: cs5.id, student_section_enrollment_id: e2.id, student_id: 4, section_id: s1.id, attendance_status: 'PRESENT', marked_by: 1 });
+    this.addAttendanceRecord({ class_session_id: cs5.id, student_section_enrollment_id: e3.id, student_id: 5, section_id: s1.id, attendance_status: 'ABSENT', marked_by: 1 });
+    // CS6
+    this.addAttendanceRecord({ class_session_id: cs6.id, student_section_enrollment_id: e1.id, student_id: 3, section_id: s1.id, attendance_status: 'PRESENT', marked_by: 1 });
+    this.addAttendanceRecord({ class_session_id: cs6.id, student_section_enrollment_id: e2.id, student_id: 4, section_id: s1.id, attendance_status: 'ABSENT', marked_by: 1 });
+    this.addAttendanceRecord({ class_session_id: cs6.id, student_section_enrollment_id: e3.id, student_id: 5, section_id: s1.id, attendance_status: 'PRESENT', marked_by: 1 });
+
+    // Attendance records for OOPS (CS402)
+    // CS7
+    this.addAttendanceRecord({ class_session_id: cs7.id, student_section_enrollment_id: e1.id, student_id: 3, section_id: s1.id, attendance_status: 'PRESENT', marked_by: 1 });
+    this.addAttendanceRecord({ class_session_id: cs7.id, student_section_enrollment_id: e2.id, student_id: 4, section_id: s1.id, attendance_status: 'PRESENT', marked_by: 1 });
+    this.addAttendanceRecord({ class_session_id: cs7.id, student_section_enrollment_id: e3.id, student_id: 5, section_id: s1.id, attendance_status: 'PRESENT', marked_by: 1 });
+    // CS8
+    this.addAttendanceRecord({ class_session_id: cs8.id, student_section_enrollment_id: e1.id, student_id: 3, section_id: s1.id, attendance_status: 'ABSENT', marked_by: 1 });
+    this.addAttendanceRecord({ class_session_id: cs8.id, student_section_enrollment_id: e2.id, student_id: 4, section_id: s1.id, attendance_status: 'PRESENT', marked_by: 1 });
+    this.addAttendanceRecord({ class_session_id: cs8.id, student_section_enrollment_id: e3.id, student_id: 5, section_id: s1.id, attendance_status: 'ABSENT', marked_by: 1 });
+    // CS9
+    this.addAttendanceRecord({ class_session_id: cs9.id, student_section_enrollment_id: e1.id, student_id: 3, section_id: s1.id, attendance_status: 'PRESENT', marked_by: 1 });
+    this.addAttendanceRecord({ class_session_id: cs9.id, student_section_enrollment_id: e2.id, student_id: 4, section_id: s1.id, attendance_status: 'ABSENT', marked_by: 1 });
+    this.addAttendanceRecord({ class_session_id: cs9.id, student_section_enrollment_id: e3.id, student_id: 5, section_id: s1.id, attendance_status: 'PRESENT', marked_by: 1 });
+    // CS10
+    this.addAttendanceRecord({ class_session_id: cs10.id, student_section_enrollment_id: e1.id, student_id: 3, section_id: s1.id, attendance_status: 'ABSENT', marked_by: 1 });
+    this.addAttendanceRecord({ class_session_id: cs10.id, student_section_enrollment_id: e2.id, student_id: 4, section_id: s1.id, attendance_status: 'PRESENT', marked_by: 1 });
+    this.addAttendanceRecord({ class_session_id: cs10.id, student_section_enrollment_id: e3.id, student_id: 5, section_id: s1.id, attendance_status: 'PRESENT', marked_by: 1 });
+    // CS11
+    this.addAttendanceRecord({ class_session_id: cs11.id, student_section_enrollment_id: e1.id, student_id: 3, section_id: s1.id, attendance_status: 'PRESENT', marked_by: 1 });
+    this.addAttendanceRecord({ class_session_id: cs11.id, student_section_enrollment_id: e2.id, student_id: 4, section_id: s1.id, attendance_status: 'PRESENT', marked_by: 1 });
+    this.addAttendanceRecord({ class_session_id: cs11.id, student_section_enrollment_id: e3.id, student_id: 5, section_id: s1.id, attendance_status: 'ABSENT', marked_by: 1 });
+
+    // Attendance records for OS (CS403)
+    // CS12
+    this.addAttendanceRecord({ class_session_id: cs12.id, student_section_enrollment_id: e1.id, student_id: 3, section_id: s1.id, attendance_status: 'PRESENT', marked_by: 1 });
+    this.addAttendanceRecord({ class_session_id: cs12.id, student_section_enrollment_id: e2.id, student_id: 4, section_id: s1.id, attendance_status: 'PRESENT', marked_by: 1 });
+    this.addAttendanceRecord({ class_session_id: cs12.id, student_section_enrollment_id: e3.id, student_id: 5, section_id: s1.id, attendance_status: 'PRESENT', marked_by: 1 });
+    // CS13
+    this.addAttendanceRecord({ class_session_id: cs13.id, student_section_enrollment_id: e1.id, student_id: 3, section_id: s1.id, attendance_status: 'PRESENT', marked_by: 1 });
+    this.addAttendanceRecord({ class_session_id: cs13.id, student_section_enrollment_id: e2.id, student_id: 4, section_id: s1.id, attendance_status: 'PRESENT', marked_by: 1 });
+    this.addAttendanceRecord({ class_session_id: cs13.id, student_section_enrollment_id: e3.id, student_id: 5, section_id: s1.id, attendance_status: 'ABSENT', marked_by: 1 });
+    // CS14
+    this.addAttendanceRecord({ class_session_id: cs14.id, student_section_enrollment_id: e1.id, student_id: 3, section_id: s1.id, attendance_status: 'PRESENT', marked_by: 1 });
+    this.addAttendanceRecord({ class_session_id: cs14.id, student_section_enrollment_id: e2.id, student_id: 4, section_id: s1.id, attendance_status: 'ABSENT', marked_by: 1 });
+    this.addAttendanceRecord({ class_session_id: cs14.id, student_section_enrollment_id: e3.id, student_id: 5, section_id: s1.id, attendance_status: 'PRESENT', marked_by: 1 });
+    // CS15
+    this.addAttendanceRecord({ class_session_id: cs15.id, student_section_enrollment_id: e1.id, student_id: 3, section_id: s1.id, attendance_status: 'ABSENT', marked_by: 1 });
+    this.addAttendanceRecord({ class_session_id: cs15.id, student_section_enrollment_id: e2.id, student_id: 4, section_id: s1.id, attendance_status: 'PRESENT', marked_by: 1 });
+    this.addAttendanceRecord({ class_session_id: cs15.id, student_section_enrollment_id: e3.id, student_id: 5, section_id: s1.id, attendance_status: 'PRESENT', marked_by: 1 });
 
     // Sample audit record
     this.addAuditLog({
@@ -174,6 +255,10 @@ class AttendanceDB {
       changed_by: 1,
       reason: 'Student left lecture early'
     });
+
+    // 10. Automatically assign/generate upcoming scheduled classes according to weekly timetable
+    this.generateTimetableSessions(s1.id, 60);
+    this.generateTimetableSessions(s2.id, 60);
   }
 
   // ---- Model Adders ----
@@ -691,6 +776,183 @@ class AttendanceDB {
       predicted_if_all_attend: ifAllAttend,
       predicted_if_all_absent: ifAllAbsent,
       scenario: scenarioResult
+    };
+  }
+
+  // ---- Subject Session History (for student drilldown) ----
+  getSubjectSessions(studentId, sectionSubjectId) {
+    const sid = Number(studentId);
+    const ssid = Number(sectionSubjectId);
+
+    const enrollments = this.student_section_enrollments.filter(e => e.student_id === sid);
+    if (enrollments.length === 0) return [];
+
+    const finalizedSessions = this.class_sessions.filter(cs =>
+      cs.section_subject_id === ssid && cs.status === 'FINALIZED'
+    );
+
+    const daysOfWeek = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    const results = [];
+
+    for (const session of finalizedSessions) {
+      const validEnrollment = enrollments.find(e => {
+        if (e.section_id !== session.section_id) return false;
+        const sDate = new Date(`${session.session_date}T00:00:00Z`);
+        const start = new Date(`${e.start_date}T00:00:00Z`);
+        if (sDate < start) return false;
+        if (e.end_date && sDate > new Date(`${e.end_date}T00:00:00Z`)) return false;
+        return true;
+      });
+
+      if (validEnrollment) {
+        const record = this.attendance_records.find(r =>
+          r.class_session_id === session.id && r.student_id === sid
+        );
+        const faculty = this.users.find(u => u.id === session.finalized_by);
+        const sDate = new Date(`${session.session_date}T00:00:00Z`);
+        const dayName = daysOfWeek[sDate.getUTCDay()];
+
+        const audit = record ? this.attendance_audit_log.find(a => a.attendance_record_id === record.id) : null;
+
+        results.push({
+          session_id: session.id,
+          session_date: session.session_date,
+          day_of_week: dayName,
+          start_time: session.start_time,
+          end_time: session.end_time,
+          attendance_status: record ? record.attendance_status : 'ABSENT',
+          record_id: record ? record.id : null,
+          marked_at: record ? record.marked_at : session.finalized_at,
+          finalized_by: faculty ? faculty.full_name : 'Faculty Administrator',
+          finalized_at: session.finalized_at,
+          audit_reason: audit ? audit.reason : null
+        });
+      }
+    }
+
+    results.sort((a, b) => (b.session_date + b.start_time).localeCompare(a.session_date + a.start_time));
+    return results;
+  }
+
+  // ---- Upcoming Sessions Detection ----
+  getUpcomingSessions(studentId, sectionSubjectId, untilDate = null, daysAhead = 30) {
+    const sid = Number(studentId);
+    const activeEnrollment = this.student_section_enrollments.find(e =>
+      e.student_id === sid && e.status === 'ACTIVE'
+    );
+    if (!activeEnrollment) throw new Error('Student has no active enrollment');
+
+    const todayStr = new Date().toISOString().split('T')[0];
+    let targetDateStr;
+
+    if (untilDate) {
+      targetDateStr = untilDate;
+      const d1 = new Date(todayStr);
+      const d2 = new Date(untilDate);
+      const diffDays = Math.ceil((d2 - d1) / (1000 * 60 * 60 * 24)) + 1;
+      if (diffDays > 0) {
+        this.generateTimetableSessions(activeEnrollment.section_id, Math.max(diffDays, 30));
+      }
+    } else {
+      const d = new Date();
+      d.setDate(d.getDate() + Number(daysAhead));
+      targetDateStr = d.toISOString().split('T')[0];
+      this.generateTimetableSessions(activeEnrollment.section_id, Number(daysAhead));
+    }
+
+    const daysOfWeek = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+
+    let upcoming = this.class_sessions.filter(cs =>
+      cs.section_id === activeEnrollment.section_id &&
+      cs.status === 'SCHEDULED' &&
+      cs.session_date >= todayStr &&
+      cs.session_date <= targetDateStr &&
+      !this.isHoliday(cs.session_date)
+    );
+
+    if (sectionSubjectId && sectionSubjectId !== 'all') {
+      upcoming = upcoming.filter(cs => cs.section_subject_id === Number(sectionSubjectId));
+    }
+
+    const enriched = upcoming.map(cs => {
+      const ss = this.section_subjects.find(s => s.id === cs.section_subject_id);
+      const subj = ss ? this.subjects.find(s => s.id === ss.subject_id) : null;
+      const sDate = new Date(`${cs.session_date}T00:00:00Z`);
+      const dayName = daysOfWeek[sDate.getUTCDay()];
+
+      return {
+        session_id: cs.id,
+        section_subject_id: cs.section_subject_id,
+        subject_name: subj ? subj.subject_name : 'Unknown',
+        subject_code: subj ? subj.subject_code : '',
+        session_date: cs.session_date,
+        day_of_week: dayName,
+        start_time: cs.start_time,
+        end_time: cs.end_time,
+        status: cs.status
+      };
+    });
+
+    enriched.sort((a, b) => (a.session_date + a.start_time).localeCompare(b.session_date + b.start_time));
+    return enriched;
+  }
+
+  // ---- Interactive Session-by-Session Predictor with Leave Support ----
+  predictAttendanceInteractive(studentId, sectionSubjectId, sessionDecisions = {}) {
+    const sid = Number(studentId);
+    const ssid = Number(sectionSubjectId);
+
+    const stats = this.calculateSubjectAttendance(sid, ssid);
+    const P_curr = stats.attended;
+    const T_curr = stats.conducted;
+
+    let plannedPresent = 0;
+    let plannedAbsent = 0;
+    let plannedLeave = 0;
+
+    for (const [sessionId, decision] of Object.entries(sessionDecisions)) {
+      const upper = String(decision).toUpperCase();
+      if (upper === 'PRESENT') plannedPresent++;
+      else if (upper === 'ABSENT') plannedAbsent++;
+      else if (upper === 'LEAVE') plannedLeave++;
+    }
+
+    // LEAVE excused: does not increment conducted denominator
+    const projectedConducted = T_curr + plannedPresent + plannedAbsent;
+    const projectedAttended = P_curr + plannedPresent;
+
+    const projectedPercentage = projectedConducted > 0
+      ? Number(((projectedAttended / projectedConducted) * 100).toFixed(2))
+      : 0;
+
+    const isEligible = projectedPercentage >= 75.0;
+
+    // Margin missable: how many more classes can be missed without dropping below 75%
+    let marginMissable = 0;
+    if (isEligible) {
+      marginMissable = Math.max(0, Math.floor((projectedAttended - 0.75 * projectedConducted) / 0.75));
+    }
+
+    // Classes needed: how many consecutive classes to attend to reach 75%
+    let classesNeeded = 0;
+    if (!isEligible) {
+      classesNeeded = Math.max(0, Math.ceil(3 * projectedConducted - 4 * projectedAttended));
+    }
+
+    return {
+      current_conducted: T_curr,
+      current_attended: P_curr,
+      current_percentage: stats.percentage,
+      planned_present: plannedPresent,
+      planned_absent: plannedAbsent,
+      planned_leave: plannedLeave,
+      total_planned_sessions: plannedPresent + plannedAbsent + plannedLeave,
+      projected_conducted: projectedConducted,
+      projected_attended: projectedAttended,
+      projected_percentage: projectedPercentage,
+      is_eligible: isEligible,
+      margin_missable: marginMissable,
+      classes_needed: classesNeeded
     };
   }
 }

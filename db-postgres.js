@@ -552,6 +552,149 @@ class NetlifyDatabaseService {
       scenario: scenarioResult
     };
   }
+
+  async getSubjectSessions(studentId, sectionSubjectId) {
+    const db = this.getClient();
+    const rows = await db.sql`
+      SELECT 
+        cs.id as session_id,
+        cs.session_date,
+        TO_CHAR(cs.session_date, 'Day') as day_of_week,
+        cs.start_time,
+        cs.end_time,
+        COALESCE(ar.attendance_status, 'ABSENT') as attendance_status,
+        ar.id as record_id,
+        COALESCE(ar.marked_at, cs.finalized_at) as marked_at,
+        u.full_name as finalized_by,
+        cs.finalized_at,
+        al.reason as audit_reason
+      FROM class_sessions cs
+      JOIN student_section_enrollments sse 
+        ON sse.student_id = ${Number(studentId)} AND sse.section_id = cs.section_id
+        AND cs.session_date >= sse.start_date
+        AND (sse.end_date IS NULL OR cs.session_date <= sse.end_date)
+      LEFT JOIN attendance_records ar 
+        ON ar.class_session_id = cs.id AND ar.student_id = ${Number(studentId)}
+      LEFT JOIN users u ON cs.finalized_by = u.id
+      LEFT JOIN attendance_audit_log al ON al.attendance_record_id = ar.id
+      WHERE cs.section_subject_id = ${Number(sectionSubjectId)}
+        AND cs.status = 'FINALIZED'
+      ORDER BY cs.session_date DESC, cs.start_time DESC
+    `;
+    return rows.map(r => ({
+      ...r,
+      day_of_week: (r.day_of_week || '').trim()
+    }));
+  }
+
+  async getUpcomingSessions(studentId, sectionSubjectId, untilDate = null, daysAhead = 30) {
+    const db = this.getClient();
+    const enrollRows = await db.sql`
+      SELECT section_id FROM student_section_enrollments
+      WHERE student_id = ${Number(studentId)} AND status = 'ACTIVE'
+      LIMIT 1
+    `;
+    if (enrollRows.length === 0) throw new Error('Student has no active enrollment');
+    const sectionId = enrollRows[0].section_id;
+
+    const todayStr = new Date().toISOString().split('T')[0];
+    let targetDateStr;
+
+    if (untilDate) {
+      targetDateStr = untilDate;
+      const d1 = new Date(todayStr);
+      const d2 = new Date(untilDate);
+      const diffDays = Math.ceil((d2 - d1) / (1000 * 60 * 60 * 24)) + 1;
+      if (diffDays > 0) {
+        await this.generateTimetableSessions(sectionId, Math.max(diffDays, 30));
+      }
+    } else {
+      const d = new Date();
+      d.setDate(d.getDate() + Number(daysAhead));
+      targetDateStr = d.toISOString().split('T')[0];
+      await this.generateTimetableSessions(sectionId, Number(daysAhead));
+    }
+
+    let query = `
+      SELECT cs.id as session_id, cs.section_subject_id, s.subject_name, s.subject_code,
+             cs.session_date, TO_CHAR(cs.session_date, 'Day') as day_of_week,
+             cs.start_time, cs.end_time, cs.status
+      FROM class_sessions cs
+      JOIN section_subjects ss ON cs.section_subject_id = ss.id
+      JOIN subjects s ON ss.subject_id = s.id
+      WHERE cs.section_id = $1
+        AND cs.status = 'SCHEDULED'
+        AND cs.session_date >= $2
+        AND cs.session_date <= $3
+        AND NOT EXISTS (SELECT 1 FROM university_holidays h WHERE h.holiday_date = cs.session_date)
+    `;
+    const params = [sectionId, todayStr, targetDateStr];
+
+    if (sectionSubjectId && sectionSubjectId !== 'all') {
+      query += ` AND cs.section_subject_id = $4`;
+      params.push(Number(sectionSubjectId));
+    }
+
+    query += ` ORDER BY cs.session_date ASC, cs.start_time ASC`;
+
+    const rows = await db.sql.unsafe(query, params);
+    return rows.map(r => ({
+      ...r,
+      day_of_week: (r.day_of_week || '').trim()
+    }));
+  }
+
+  async predictAttendanceInteractive(studentId, sectionSubjectId, sessionDecisions = {}) {
+    const stats = await this.calculateSubjectAttendance(studentId, sectionSubjectId);
+    const P_curr = stats.attended;
+    const T_curr = stats.conducted;
+
+    let plannedPresent = 0;
+    let plannedAbsent = 0;
+    let plannedLeave = 0;
+
+    for (const [sessionId, decision] of Object.entries(sessionDecisions)) {
+      const upper = String(decision).toUpperCase();
+      if (upper === 'PRESENT') plannedPresent++;
+      else if (upper === 'ABSENT') plannedAbsent++;
+      else if (upper === 'LEAVE') plannedLeave++;
+    }
+
+    const projectedConducted = T_curr + plannedPresent + plannedAbsent;
+    const projectedAttended = P_curr + plannedPresent;
+
+    const projectedPercentage = projectedConducted > 0
+      ? Number(((projectedAttended / projectedConducted) * 100).toFixed(2))
+      : 0;
+
+    const isEligible = projectedPercentage >= 75.0;
+
+    let marginMissable = 0;
+    if (isEligible) {
+      marginMissable = Math.max(0, Math.floor((projectedAttended - 0.75 * projectedConducted) / 0.75));
+    }
+
+    let classesNeeded = 0;
+    if (!isEligible) {
+      classesNeeded = Math.max(0, Math.ceil(3 * projectedConducted - 4 * projectedAttended));
+    }
+
+    return {
+      current_conducted: T_curr,
+      current_attended: P_curr,
+      current_percentage: stats.percentage,
+      planned_present: plannedPresent,
+      planned_absent: plannedAbsent,
+      planned_leave: plannedLeave,
+      total_planned_sessions: plannedPresent + plannedAbsent + plannedLeave,
+      projected_conducted: projectedConducted,
+      projected_attended: projectedAttended,
+      projected_percentage: projectedPercentage,
+      is_eligible: isEligible,
+      margin_missable: marginMissable,
+      classes_needed: classesNeeded
+    };
+  }
 }
 
 module.exports = new NetlifyDatabaseService();

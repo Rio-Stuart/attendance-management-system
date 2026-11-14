@@ -337,6 +337,56 @@ app.get('/api/students/:id/predict', async (req, res) => {
   }
 });
 
+app.get('/api/students/:id/subject-sessions', async (req, res) => {
+  try {
+    const studentId = Number(req.params.id);
+    const sectionSubjectId = Number(req.query.sectionSubjectId);
+    if (!sectionSubjectId) {
+      return res.status(400).json({ success: false, message: 'sectionSubjectId query parameter is required' });
+    }
+    const { type, db } = getBackend();
+    const sessions = type === 'postgres'
+      ? await db.getSubjectSessions(studentId, sectionSubjectId)
+      : db.getSubjectSessions(studentId, sectionSubjectId);
+    res.json({ success: true, data: sessions });
+  } catch (err) {
+    res.status(400).json({ success: false, message: err.message });
+  }
+});
+
+app.get('/api/students/:id/upcoming-sessions', async (req, res) => {
+  try {
+    const studentId = Number(req.params.id);
+    const sectionSubjectId = req.query.sectionSubjectId || null;
+    const untilDate = req.query.untilDate || null;
+    const daysAhead = Number(req.query.daysAhead || 30);
+    const { type, db } = getBackend();
+    const sessions = type === 'postgres'
+      ? await db.getUpcomingSessions(studentId, sectionSubjectId, untilDate, daysAhead)
+      : db.getUpcomingSessions(studentId, sectionSubjectId, untilDate, daysAhead);
+    res.json({ success: true, data: sessions });
+  } catch (err) {
+    res.status(400).json({ success: false, message: err.message });
+  }
+});
+
+app.post('/api/students/:id/predict-interactive', async (req, res) => {
+  try {
+    const studentId = Number(req.params.id);
+    const { sectionSubjectId, sessionDecisions } = req.body;
+    if (!sectionSubjectId) {
+      return res.status(400).json({ success: false, message: 'sectionSubjectId is required' });
+    }
+    const { type, db } = getBackend();
+    const result = type === 'postgres'
+      ? await db.predictAttendanceInteractive(studentId, sectionSubjectId, sessionDecisions || {})
+      : db.predictAttendanceInteractive(studentId, sectionSubjectId, sessionDecisions || {});
+    res.json({ success: true, data: result });
+  } catch (err) {
+    res.status(400).json({ success: false, message: err.message });
+  }
+});
+
 // SPA fallback for local server
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));

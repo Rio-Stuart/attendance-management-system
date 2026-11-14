@@ -53,7 +53,8 @@ function setupNavigation() {
       if (btn.dataset.tab === 'reportsTab') loadSectionReport();
       if (btn.dataset.tab === 'timetableTab') loadTimetable();
       if (btn.dataset.tab === 'studentDashboardTab' && currentUser) loadStudentDashboard();
-      if (btn.dataset.tab === 'studentPredictorTab' && currentUser) initPredictorSubjects();
+      if (btn.dataset.tab === 'studentPredictorTab' && currentUser) initPredictor();
+      if (btn.dataset.tab === 'studentTimetableTab' && currentUser) loadStudentTimetable();
     });
   });
 
@@ -107,7 +108,8 @@ function setUser(user) {
     document.getElementById('adminView').classList.add('hidden');
     document.getElementById('studentView').classList.remove('hidden');
     loadStudentDashboard();
-    initPredictorSubjects();
+    initPredictor();
+    loadStudentTimetable();
   }
 }
 
@@ -173,6 +175,11 @@ function setupModals() {
   document.getElementById('cancelEditBtn').addEventListener('click', () => {
     document.getElementById('editFinalizedModal').classList.add('hidden');
   });
+
+  // Subject Session History Modal
+  const closeHist = () => document.getElementById('subjectHistoryModal').classList.add('hidden');
+  document.getElementById('closeSubjectHistoryModal')?.addEventListener('click', closeHist);
+  document.getElementById('closeSubjectHistoryBtn')?.addEventListener('click', closeHist);
 }
 
 function showLoginModal() {
@@ -362,11 +369,23 @@ function setupForms() {
   // Timetable
   document.getElementById('timetableSectionSelect').addEventListener('change', loadTimetable);
 
-  // Predictor
-  document.getElementById('runPredictorBtn').addEventListener('click', runPredictor);
-  document.getElementById('scenarioSlider').addEventListener('input', e => {
-    document.getElementById('sliderValue').textContent = e.target.value;
-    calculateScenarioProjection(Number(e.target.value));
+  // Student Predictor & Detection Listeners
+  document.getElementById('detectUpcomingClassesBtn')?.addEventListener('click', detectUpcomingClasses);
+  document.getElementById('predictorSubjectSelect')?.addEventListener('change', detectUpcomingClasses);
+  document.getElementById('predictorUntilDate')?.addEventListener('change', detectUpcomingClasses);
+
+  // Bulk Upcoming Decisions
+  document.getElementById('markAllUpcomingPresent')?.addEventListener('click', () => setAllUpcomingDecisions('PRESENT'));
+  document.getElementById('markAllUpcomingAbsent')?.addEventListener('click', () => setAllUpcomingDecisions('ABSENT'));
+  document.getElementById('markAllUpcomingLeave')?.addEventListener('click', () => setAllUpcomingDecisions('LEAVE'));
+
+  // Subject History Filter Chips
+  document.querySelectorAll('[data-hist-filter]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('[data-hist-filter]').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      renderSubjectHistoryTable(btn.dataset.histFilter);
+    });
   });
 }
 
@@ -741,6 +760,12 @@ async function loadTimetable() {
 }
 
 // ---- STUDENT PORTAL ----
+let currentSubjectSessions = [];
+let currentSubjectHistoryInfo = null;
+let currentUpcomingSessions = [];
+let currentUpcomingDecisions = {}; // { [sessionId]: 'PRESENT' | 'ABSENT' | 'LEAVE' }
+let currentSubjectBaseline = { attended: 0, conducted: 0, percentage: 0 };
+
 async function loadStudentDashboard() {
   if (!currentUser) return;
   try {
@@ -754,33 +779,173 @@ async function loadStudentDashboard() {
     document.getElementById('studentSectionName').textContent = d.section_name;
     document.getElementById('studentYear').textContent = d.academic_year;
     document.getElementById('studentOverallPct').textContent = `${d.overall_percentage}%`;
+    const secNameEl = document.getElementById('studentTimetableSectionName');
+    if (secNameEl) secNameEl.textContent = d.section_name;
 
     const container = document.getElementById('subjectCardsContainer');
-    container.innerHTML = d.subjects.map(s => `
-      <div class="subject-card">
-        <div class="subject-card-header">
-          <div>
-            <h3>${s.subject_name}</h3>
-            <span class="subject-code-badge">${s.subject_code}</span>
+    container.innerHTML = d.subjects.map(s => {
+      const subjectJson = JSON.stringify({
+        section_subject_id: s.section_subject_id,
+        subject_name: s.subject_name,
+        subject_code: s.subject_code,
+        conducted: s.conducted,
+        attended: s.attended,
+        missed: s.missed,
+        percentage: s.percentage
+      }).replace(/"/g, '&quot;');
+
+      return `
+        <div class="subject-card clickable-subject-card" onclick="openSubjectHistoryModal(${subjectJson})">
+          <div class="subject-card-header">
+            <div>
+              <h3>${s.subject_name}</h3>
+              <span class="subject-code-badge">${s.subject_code}</span>
+            </div>
+            <span class="badge ${s.percentage >= 75 ? 'badge-present' : 'badge-absent'}">${s.percentage}%</span>
           </div>
-          <span class="badge ${s.percentage >= 75 ? 'badge-present' : 'badge-absent'}">${s.percentage}%</span>
+          <div class="progress-bar-bg">
+            <div class="progress-bar-fill" style="width: ${s.percentage}%; background: ${s.percentage >= 75 ? 'var(--success)' : 'var(--danger)'}"></div>
+          </div>
+          <div class="session-meta" style="margin-top: 1rem; padding-bottom: 0; border: none; font-size: 0.82rem;">
+            <div>Conducted: <strong>${s.conducted}</strong></div>
+            <div>Attended: <strong class="text-success">${s.attended}</strong></div>
+            <div>Missed: <strong class="text-danger">${s.missed}</strong></div>
+          </div>
+          <div class="card-action-bar mt-3">
+            <button type="button" class="btn btn-sm btn-outline-primary w-full view-sessions-btn">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+              View Lecture Sessions (${s.conducted}) ➔
+            </button>
+          </div>
         </div>
-        <div class="progress-bar-bg">
-          <div class="progress-bar-fill" style="width: ${s.percentage}%; background: ${s.percentage >= 75 ? 'var(--success)' : 'var(--danger)'}"></div>
-        </div>
-        <div class="session-meta" style="margin-top: 1rem; padding-bottom: 0; border: none; font-size: 0.8rem;">
-          <div>Conducted: <strong>${s.conducted}</strong></div>
-          <div>Attended: <strong class="text-success">${s.attended}</strong></div>
-          <div>Missed: <strong class="text-danger">${s.missed}</strong></div>
-        </div>
-      </div>
-    `).join('');
+      `;
+    }).join('');
   } catch (err) {
     showToast(err.message, 'error');
   }
 }
 
-async function initPredictorSubjects() {
+// ---- SUBJECT SESSION ATTENDANCE HISTORY MODAL ----
+async function openSubjectHistoryModal(subjectInfo) {
+  currentSubjectHistoryInfo = subjectInfo;
+  document.getElementById('modalSubjectHistoryTitle').textContent = `${subjectInfo.subject_name} (${subjectInfo.subject_code})`;
+  document.getElementById('modalSubjectHistorySubtitle').textContent = `Complete lecture history with attendance status for section ${document.getElementById('studentSectionName').textContent}`;
+
+  document.getElementById('modalHistConducted').textContent = subjectInfo.conducted;
+  document.getElementById('modalHistAttended').textContent = subjectInfo.attended;
+  document.getElementById('modalHistMissed').textContent = subjectInfo.missed;
+  document.getElementById('modalHistPercentage').textContent = `${subjectInfo.percentage}%`;
+
+  // Reset active filter button
+  document.querySelectorAll('[data-hist-filter]').forEach(b => b.classList.remove('active'));
+  document.getElementById('filterHistAll')?.classList.add('active');
+
+  const tbody = document.getElementById('subjectHistoryTableBody');
+  tbody.innerHTML = '<tr><td colspan="6" class="loading">Loading conducted sessions...</td></tr>';
+  document.getElementById('subjectHistoryModal').classList.remove('hidden');
+
+  try {
+    const res = await fetch(`${API_BASE}/students/${currentUser.id}/subject-sessions?sectionSubjectId=${subjectInfo.section_subject_id}`);
+    const data = await res.json();
+    if (!data.success) throw new Error(data.message);
+
+    currentSubjectSessions = data.data;
+    renderSubjectHistoryTable('ALL');
+  } catch (err) {
+    tbody.innerHTML = `<tr><td colspan="6" class="text-danger">${err.message}</td></tr>`;
+  }
+}
+
+function renderSubjectHistoryTable(filter = 'ALL') {
+  const tbody = document.getElementById('subjectHistoryTableBody');
+  let list = currentSubjectSessions || [];
+
+  if (filter === 'PRESENT') {
+    list = list.filter(s => s.attendance_status === 'PRESENT');
+  } else if (filter === 'ABSENT') {
+    list = list.filter(s => s.attendance_status === 'ABSENT');
+  }
+
+  if (list.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="6" class="loading">No ${filter === 'ALL' ? '' : filter.toLowerCase() + ' '}sessions found for this subject.</td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = list.map((s, idx) => `
+    <tr>
+      <td><span class="subject-code-badge">#${list.length - idx}</span></td>
+      <td><strong>${s.session_date}</strong> <span class="text-muted">(${s.day_of_week})</span></td>
+      <td><code>${s.start_time} - ${s.end_time}</code></td>
+      <td>
+        <span class="badge ${s.attendance_status === 'PRESENT' ? 'badge-present' : 'badge-absent'}">
+          ${s.attendance_status === 'PRESENT' ? '✓ PRESENT' : '✗ ABSENT'}
+        </span>
+      </td>
+      <td><small>${s.finalized_by || 'Faculty'}</small></td>
+      <td><small class="text-muted">${s.audit_reason ? '⚠️ ' + s.audit_reason : '—'}</small></td>
+    </tr>
+  `).join('');
+}
+
+// ---- STUDENT WEEKLY TIMETABLE ----
+async function loadStudentTimetable() {
+  if (!currentUser) return;
+  const tbody = document.getElementById('studentTimetableTableBody');
+  tbody.innerHTML = '<tr><td colspan="6" class="loading">Loading weekly timetable...</td></tr>';
+
+  try {
+    const dRes = await fetch(`${API_BASE}/students/${currentUser.id}/dashboard`);
+    const dData = await dRes.json();
+    if (!dData.success) throw new Error(dData.message);
+
+    const sectionId = dData.data.section_id;
+    const secNameEl = document.getElementById('studentTimetableSectionName');
+    if (secNameEl) secNameEl.textContent = dData.data.section_name;
+
+    const res = await fetch(`${API_BASE}/sections/${sectionId}/timetable`);
+    const data = await res.json();
+    if (!data.success) throw new Error(data.message);
+
+    if (data.data.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="6" class="loading">No timetable slots found for your section.</td></tr>';
+      return;
+    }
+
+    const dayOrder = { 'MONDAY': 1, 'TUESDAY': 2, 'WEDNESDAY': 3, 'THURSDAY': 4, 'FRIDAY': 5, 'SATURDAY': 6, 'SUNDAY': 7 };
+    const sorted = [...data.data].sort((a, b) => {
+      const dDiff = (dayOrder[a.day_of_week] || 0) - (dayOrder[b.day_of_week] || 0);
+      if (dDiff !== 0) return dDiff;
+      return a.start_time.localeCompare(b.start_time);
+    });
+
+    tbody.innerHTML = sorted.map(wt => `
+      <tr>
+        <td><strong>${wt.day_of_week}</strong></td>
+        <td><span class="subject-code-badge">${wt.subject_code}</span></td>
+        <td><strong>${wt.subject_name}</strong></td>
+        <td><code>${wt.start_time}</code></td>
+        <td><code>${wt.end_time}</code></td>
+        <td><small class="text-muted">${wt.valid_from} to ${wt.valid_to}</small></td>
+      </tr>
+    `).join('');
+  } catch (err) {
+    tbody.innerHTML = `<tr><td colspan="6" class="text-danger">${err.message}</td></tr>`;
+  }
+}
+
+// ---- TIMETABLE-DRIVEN ATTENDANCE PREDICTOR WITH LEAVE SUPPORT ----
+function setPredictorDays(days) {
+  const d = new Date();
+  d.setDate(d.getDate() + Number(days));
+  const dateStr = d.toISOString().split('T')[0];
+  const input = document.getElementById('predictorUntilDate');
+  if (input) {
+    input.value = dateStr;
+    detectUpcomingClasses();
+  }
+}
+
+async function initPredictor() {
   if (!currentUser) return;
   try {
     const dRes = await fetch(`${API_BASE}/students/${currentUser.id}/dashboard`);
@@ -791,66 +956,179 @@ async function initPredictorSubjects() {
     select.innerHTML = dData.data.subjects.map(s => `
       <option value="${s.section_subject_id}">${s.subject_name} (${s.subject_code})</option>
     `).join('');
+
+    // Default target date to 30 days ahead if not set
+    const dateInput = document.getElementById('predictorUntilDate');
+    if (!dateInput.value) {
+      const d = new Date();
+      d.setDate(d.getDate() + 30);
+      dateInput.value = d.toISOString().split('T')[0];
+    }
+
+    // Automatically detect upcoming classes for default selection
+    detectUpcomingClasses();
   } catch (err) {
-    console.error('Failed to init predictor subjects:', err);
+    console.error('Failed to init predictor:', err);
   }
 }
 
-async function runPredictor() {
+async function detectUpcomingClasses() {
   if (!currentUser) return;
   const ssId = document.getElementById('predictorSubjectSelect').value;
-  const daysAhead = document.getElementById('predictorDaysAhead').value;
+  const untilDate = document.getElementById('predictorUntilDate').value;
+  if (!ssId) return;
+
+  const tbody = document.getElementById('upcomingSessionsTableBody');
+  tbody.innerHTML = '<tr><td colspan="5" class="loading">Detecting scheduled classes from weekly timetable...</td></tr>';
+  document.getElementById('interactivePredictorContainer').classList.remove('hidden');
 
   try {
-    const res = await fetch(`${API_BASE}/students/${currentUser.id}/predict?sectionSubjectId=${ssId}&daysAhead=${daysAhead}`);
+    // 1. Fetch current subject baseline stats from student dashboard
+    const dashRes = await fetch(`${API_BASE}/students/${currentUser.id}/dashboard`);
+    const dashData = await dashRes.json();
+    const currSubj = dashData.data.subjects.find(s => s.section_subject_id === Number(ssId));
+    if (currSubj) {
+      currentSubjectBaseline = {
+        attended: currSubj.attended,
+        conducted: currSubj.conducted,
+        percentage: currSubj.percentage
+      };
+    }
+
+    // 2. Fetch upcoming scheduled sessions up to untilDate
+    const res = await fetch(`${API_BASE}/students/${currentUser.id}/upcoming-sessions?sectionSubjectId=${ssId}&untilDate=${untilDate}`);
     const data = await res.json();
     if (!data.success) throw new Error(data.message);
 
-    currentPredictorData = data.data;
+    currentUpcomingSessions = data.data;
 
-    document.getElementById('predConducted').textContent = currentPredictorData.current_conducted;
-    document.getElementById('predAttended').textContent = currentPredictorData.current_attended;
-    document.getElementById('predUpcoming').textContent = currentPredictorData.upcoming_sessions;
-    document.getElementById('predCurrentPct').textContent = `${currentPredictorData.current_percentage}%`;
+    // Initialize all detected sessions as PRESENT by default
+    currentUpcomingDecisions = {};
+    currentUpcomingSessions.forEach(s => {
+      currentUpcomingDecisions[s.session_id] = 'PRESENT';
+    });
 
-    document.getElementById('predBestPct').textContent = `${currentPredictorData.predicted_if_all_attend}%`;
-    document.getElementById('predWorstPct').textContent = `${currentPredictorData.predicted_if_all_absent}%`;
-
-    // Configure slider
-    const slider = document.getElementById('scenarioSlider');
-    slider.max = currentPredictorData.upcoming_sessions;
-    slider.value = currentPredictorData.upcoming_sessions;
-    document.getElementById('sliderMax').textContent = currentPredictorData.upcoming_sessions;
-    document.getElementById('sliderValue').textContent = slider.value;
-
-    calculateScenarioProjection(Number(slider.value));
-    document.getElementById('predictorResults').classList.remove('hidden');
+    renderUpcomingSessionsTable();
+    updateInteractiveCalculations();
   } catch (err) {
+    tbody.innerHTML = `<tr><td colspan="5" class="text-danger">${err.message}</td></tr>`;
     showToast(err.message, 'error');
   }
 }
 
-function calculateScenarioProjection(attendedCount) {
-  if (!currentPredictorData) return;
-  const T = currentPredictorData.current_conducted;
-  const P = currentPredictorData.current_attended;
-  const K = currentPredictorData.upcoming_sessions;
-  const X = attendedCount;
+function setSessionDecision(sessionId, decision) {
+  currentUpcomingDecisions[sessionId] = decision;
+  renderUpcomingSessionsTable();
+  updateInteractiveCalculations();
+}
 
-  const totalPossible = T + K;
-  const projectedPct = totalPossible > 0 ? Number((((P + X) / totalPossible) * 100).toFixed(2)) : 0;
+function setAllUpcomingDecisions(decision) {
+  currentUpcomingSessions.forEach(s => {
+    currentUpcomingDecisions[s.session_id] = decision;
+  });
+  renderUpcomingSessionsTable();
+  updateInteractiveCalculations();
+}
 
-  const el = document.getElementById('scenarioProjectedPct');
-  el.textContent = `${projectedPct}%`;
+function renderUpcomingSessionsTable() {
+  const tbody = document.getElementById('upcomingSessionsTableBody');
+  if (!currentUpcomingSessions || currentUpcomingSessions.length === 0) {
+    tbody.innerHTML = `
+      <tr>
+        <td colspan="5" class="loading">
+          No scheduled classes detected between today and the target date. Check if classes have concluded or select a further date horizon.
+        </td>
+      </tr>`;
+    return;
+  }
 
-  const pill = document.getElementById('scenarioThresholdPill');
-  if (projectedPct >= 75) {
-    pill.textContent = 'ELIGIBLE (>= 75%)';
-    pill.className = 'threshold-pill pill-eligible';
-    el.style.color = 'var(--success)';
+  tbody.innerHTML = currentUpcomingSessions.map((s, idx) => {
+    const curDecision = currentUpcomingDecisions[s.session_id] || 'PRESENT';
+    return `
+      <tr class="upcoming-session-row">
+        <td><span class="subject-code-badge">#${idx + 1}</span></td>
+        <td><strong>${s.session_date}</strong> <span class="text-muted">(${s.day_of_week})</span></td>
+        <td><code>${s.start_time} - ${s.end_time}</code></td>
+        <td>${s.subject_name} (${s.subject_code})</td>
+        <td>
+          <div class="decision-toggle-group">
+            <button type="button" 
+              class="decision-btn btn-present ${curDecision === 'PRESENT' ? 'active' : ''}" 
+              onclick="setSessionDecision(${s.session_id}, 'PRESENT')">
+              ✓ PRESENT
+            </button>
+            <button type="button" 
+              class="decision-btn btn-absent ${curDecision === 'ABSENT' ? 'active' : ''}" 
+              onclick="setSessionDecision(${s.session_id}, 'ABSENT')">
+              ✗ ABSENT
+            </button>
+            <button type="button" 
+              class="decision-btn btn-leave ${curDecision === 'LEAVE' ? 'active' : ''}" 
+              onclick="setSessionDecision(${s.session_id}, 'LEAVE')">
+              🏖️ LEAVE
+            </button>
+          </div>
+        </td>
+      </tr>
+    `;
+  }).join('');
+}
+
+function updateInteractiveCalculations() {
+  const T_curr = currentSubjectBaseline.conducted;
+  const P_curr = currentSubjectBaseline.attended;
+
+  let plannedPresent = 0;
+  let plannedAbsent = 0;
+  let plannedLeave = 0;
+
+  for (const s of currentUpcomingSessions) {
+    const dec = currentUpcomingDecisions[s.session_id] || 'PRESENT';
+    if (dec === 'PRESENT') plannedPresent++;
+    else if (dec === 'ABSENT') plannedAbsent++;
+    else if (dec === 'LEAVE') plannedLeave++;
+  }
+
+  // LEAVE is excused: excluded from conducted denominator!
+  const projectedConducted = T_curr + plannedPresent + plannedAbsent;
+  const projectedAttended = P_curr + plannedPresent;
+  const projectedPct = projectedConducted > 0
+    ? Number(((projectedAttended / projectedConducted) * 100).toFixed(2))
+    : 0;
+
+  // Update UI Elements
+  document.getElementById('predCurrentAttended').textContent = P_curr;
+  document.getElementById('predCurrentConducted').textContent = T_curr;
+  document.getElementById('predCurrentPct').textContent = `${currentSubjectBaseline.percentage}%`;
+
+  document.getElementById('predPlannedPresCount').textContent = `${plannedPresent} Pres`;
+  document.getElementById('predPlannedAbsCount').textContent = `${plannedAbsent} Abs`;
+  document.getElementById('predPlannedLeaveCount').textContent = `${plannedLeave} Leave`;
+  document.getElementById('predUpcomingCount').textContent = currentUpcomingSessions.length;
+
+  document.getElementById('predProjectedScore').textContent = `${projectedAttended} / ${projectedConducted}`;
+  const pctEl = document.getElementById('predProjectedPct');
+  pctEl.textContent = `${projectedPct}%`;
+
+  const pill = document.getElementById('predEligibilityPill');
+  const bufferEl = document.getElementById('predBufferExplanation');
+  const statusCard = document.getElementById('predStatusCard');
+
+  if (projectedPct >= 75.0) {
+    pill.textContent = 'ELIGIBLE (≥ 75%)';
+    pill.className = 'stat-value text-success font-bold';
+    pctEl.style.color = 'var(--success)';
+    if (statusCard) statusCard.style.borderColor = 'var(--success)';
+    // Safe miss buffer: (P) / (T + m) >= 0.75 => m <= (P - 0.75 * T) / 0.75
+    const margin = Math.max(0, Math.floor((projectedAttended - 0.75 * projectedConducted) / 0.75));
+    bufferEl.innerHTML = `<span class="text-success">✓ Safe buffer:</span> You can safely miss up to <strong>${margin}</strong> more lecture(s) without falling below 75%.`;
   } else {
     pill.textContent = 'DEFAULTER (< 75%)';
-    pill.className = 'threshold-pill pill-defaulter';
-    el.style.color = 'var(--danger)';
+    pill.className = 'stat-value text-danger font-bold';
+    pctEl.style.color = 'var(--danger)';
+    if (statusCard) statusCard.style.borderColor = 'var(--danger)';
+    // Classes needed: (P + c) / (T + c) >= 0.75 => c >= 3 * T - 4 * P
+    const needed = Math.max(0, Math.ceil(3 * projectedConducted - 4 * projectedAttended));
+    bufferEl.innerHTML = `<span class="text-danger">⚠️ Attendance shortage:</span> You must attend at least <strong>${needed}</strong> more consecutive lecture(s) to reach 75%.`;
   }
 }
