@@ -1,5 +1,7 @@
 # Attendance Management System (AMS)
 
+[![Deploy to Netlify](https://www.netlify.com/img/deploy/button.svg)](https://app.netlify.com/start/deploy?repository=https://github.com/Rio-Stuart/attendance-management-system)
+
 A full-stack, enterprise-grade university attendance management platform implementing the **Mandatory Class Sessions & Attendance Records Architecture**.
 
 Built with a dual-engine architecture:
