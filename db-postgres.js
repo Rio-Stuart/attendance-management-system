@@ -175,6 +175,127 @@ class NetlifyDatabaseService {
     return updated[0];
   }
 
+  // ---- Date-Wise Attendance Operations ----
+  async getDateSessionsSummary(sectionId, dateStr) {
+    const db = this.getClient();
+    const dateObj = new Date(`${dateStr}T00:00:00Z`);
+    const days = ['SUNDAY', 'MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY'];
+    const dayOfWeek = days[dateObj.getUTCDay()];
+
+    const holidayRows = await db.sql`SELECT * FROM university_holidays WHERE holiday_date = ${dateStr}`;
+    const holiday = holidayRows[0] || null;
+
+    const timetable = await this.getTimetable(sectionId);
+    const daySlots = timetable.filter(wt =>
+      wt.day_of_week === dayOfWeek &&
+      (!wt.valid_from || dateStr >= wt.valid_from) &&
+      (!wt.valid_to || dateStr <= wt.valid_to)
+    );
+
+    const existingSessions = await db.sql`
+      SELECT cs.*, s.subject_name, s.subject_code, u.full_name as finalized_by_name,
+             COUNT(ar.id) as total_marked,
+             COUNT(CASE WHEN ar.attendance_status = 'PRESENT' THEN 1 END) as present_count
+      FROM class_sessions cs
+      JOIN section_subjects ss ON cs.section_subject_id = ss.id
+      JOIN subjects s ON ss.subject_id = s.id
+      LEFT JOIN users u ON cs.finalized_by = u.id
+      LEFT JOIN attendance_records ar ON ar.class_session_id = cs.id
+      WHERE cs.section_id = ${Number(sectionId)} AND cs.session_date = ${dateStr}
+      GROUP BY cs.id, s.subject_name, s.subject_code, u.full_name
+    `;
+
+    const periods = [];
+    const matchedIds = new Set();
+
+    for (const slot of daySlots) {
+      const existing = existingSessions.find(cs =>
+        cs.section_subject_id === slot.section_subject_id &&
+        cs.start_time.startsWith(slot.start_time)
+      );
+
+      if (existing) {
+        matchedIds.add(existing.id);
+        periods.push({
+          type: 'TIMETABLE_SLOT',
+          session_id: existing.id,
+          timetable_entry_id: slot.id,
+          section_subject_id: slot.section_subject_id,
+          subject_name: slot.subject_name,
+          subject_code: slot.subject_code,
+          start_time: slot.start_time,
+          end_time: slot.end_time,
+          status: existing.status,
+          total_marked: Number(existing.total_marked || 0),
+          present_count: Number(existing.present_count || 0),
+          faculty_name: existing.finalized_by_name || 'Faculty Administrator',
+          finalized_at: existing.finalized_at,
+          can_start: false
+        });
+      } else {
+        periods.push({
+          type: 'TIMETABLE_SLOT',
+          session_id: null,
+          timetable_entry_id: slot.id,
+          section_subject_id: slot.section_subject_id,
+          subject_name: slot.subject_name,
+          subject_code: slot.subject_code,
+          start_time: slot.start_time,
+          end_time: slot.end_time,
+          status: 'UNSCHEDULED',
+          total_marked: 0,
+          present_count: 0,
+          faculty_name: null,
+          finalized_at: null,
+          can_start: !holiday
+        });
+      }
+    }
+
+    for (const cs of existingSessions) {
+      if (!matchedIds.has(cs.id)) {
+        periods.push({
+          type: 'ADHOC_SESSION',
+          session_id: cs.id,
+          timetable_entry_id: cs.timetable_entry_id,
+          section_subject_id: cs.section_subject_id,
+          subject_name: cs.subject_name,
+          subject_code: cs.subject_code,
+          start_time: cs.start_time,
+          end_time: cs.end_time,
+          status: cs.status,
+          total_marked: Number(cs.total_marked || 0),
+          present_count: Number(cs.present_count || 0),
+          faculty_name: cs.finalized_by_name || 'Faculty Administrator',
+          finalized_at: cs.finalized_at,
+          can_start: false
+        });
+      }
+    }
+
+    periods.sort((a, b) => a.start_time.localeCompare(b.start_time));
+
+    return {
+      date: dateStr,
+      day_of_week: dayOfWeek,
+      is_holiday: !!holiday,
+      holiday_description: holiday ? holiday.description : null,
+      periods
+    };
+  }
+
+  async getOrCreateSessionForDate(data) {
+    const db = this.getClient();
+    const existing = await db.sql`
+      SELECT * FROM class_sessions
+      WHERE section_subject_id = ${Number(data.section_subject_id)}
+        AND session_date = ${data.session_date}
+        AND start_time = ${data.start_time}
+    `;
+    if (existing.length > 0) return existing[0];
+    return await this.createSession(data);
+  }
+
   // ---- Attendance Workflow ----
   async getRosterForSession(sessionId) {
     const db = this.getClient();

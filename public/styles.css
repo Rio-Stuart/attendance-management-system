@@ -966,3 +966,254 @@ body {
   max-width: 860px;
   width: 95%;
 }
+
+/* Validity Period & Timetable Column Fixes */
+.validity-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  background: var(--bg-page);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 0.3rem 0.65rem;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #334155;
+  white-space: nowrap;
+}
+
+.validity-icon {
+  font-size: 0.9rem;
+}
+
+/* Date-Wise Attendance Marker Controls */
+.date-marker-header-grid {
+  display: grid;
+  grid-template-columns: 1fr 1.6fr auto;
+  gap: 1.25rem;
+  align-items: flex-end;
+}
+
+@media (max-width: 900px) {
+  .date-marker-header-grid {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+}
+
+.date-input-with-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.marking-date-picker {
+  flex: 1;
+  min-width: 140px;
+}
+
+.date-nav-btn {
+  padding: 0.45rem 0.65rem;
+  font-size: 0.78rem;
+  white-space: nowrap;
+}
+
+.date-today-btn {
+  padding: 0.45rem 0.75rem;
+  font-size: 0.78rem;
+  white-space: nowrap;
+}
+
+.date-summary-badge-container {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  justify-content: center;
+}
+
+.day-of-week-pill {
+  background: var(--primary-light);
+  color: var(--primary);
+  font-weight: 800;
+  font-size: 0.95rem;
+  padding: 0.25rem 0.75rem;
+  border-radius: 9999px;
+  letter-spacing: -0.01em;
+}
+
+.date-meta-text {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  margin-top: 0.2rem;
+  font-weight: 600;
+}
+
+/* Periods Container & Cards */
+.periods-container {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
+  gap: 1rem;
+}
+
+.period-card {
+  background: white;
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1rem 1.15rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  position: relative;
+}
+
+.period-card:hover {
+  transform: translateY(-2px);
+  border-color: #818cf8;
+  box-shadow: var(--shadow);
+}
+
+.period-card.active {
+  border-color: var(--primary);
+  background: #f8faff;
+  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.15), var(--shadow);
+}
+
+.period-card.unscheduled {
+  border-style: dashed;
+  background: #fdfdfd;
+}
+
+.period-card-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 0.6rem;
+}
+
+.period-time-badge {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.8rem;
+  font-weight: 700;
+  background: var(--bg-page);
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
+  color: #1e293b;
+}
+
+.period-title {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--text-main);
+  margin-bottom: 0.25rem;
+}
+
+.period-code {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+
+.period-card-bottom {
+  margin-top: 0.85rem;
+  padding-top: 0.65rem;
+  border-top: 1px solid #f1f5f9;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.period-status-meta {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+
+/* Student Weekly Schedule Day Cards */
+.weekly-schedule-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.day-schedule-card {
+  background: white;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  box-shadow: var(--shadow-sm);
+}
+
+.day-schedule-header {
+  background: #f8fafc;
+  padding: 0.65rem 1rem;
+  font-weight: 800;
+  font-size: 0.85rem;
+  color: #334155;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.day-schedule-body {
+  padding: 0.85rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.scheduled-lecture-item {
+  background: var(--primary-light);
+  border-left: 3px solid var(--primary);
+  border-radius: 4px;
+  padding: 0.5rem 0.75rem;
+}
+
+.scheduled-lecture-item .lec-time {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--primary);
+}
+
+.scheduled-lecture-item .lec-subject {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--text-main);
+  margin-top: 2px;
+}
+
+.day-empty-text {
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  font-style: italic;
+  padding: 0.5rem 0;
+  text-align: center;
+}
+
+/* Quick Banner in Student Dashboard */
+.student-quick-banner {
+  background: linear-gradient(135deg, #eef2ff, #f0fdf4);
+  border: 1px solid #c7d2fe;
+  border-radius: var(--radius);
+  padding: 1rem 1.25rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.student-quick-banner h4 {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #1e1b4b;
+}
+
+.student-quick-banner p {
+  font-size: 0.82rem;
+  color: #475569;
+}

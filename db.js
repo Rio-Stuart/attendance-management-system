@@ -406,6 +406,156 @@ class AttendanceDB {
     return session;
   }
 
+  // ---- Date-Wise Attendance Operations ----
+  getDateSessionsSummary(sectionId, dateStr) {
+    const secId = Number(sectionId);
+    const dateObj = new Date(`${dateStr}T00:00:00Z`);
+    const days = ['SUNDAY', 'MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY'];
+    const dayOfWeek = days[dateObj.getUTCDay()];
+
+    const holiday = this.university_holidays.find(h => h.holiday_date === dateStr);
+
+    // 1. Timetable entries for this day of week in this section
+    const sectionSubjects = this.section_subjects.filter(ss => ss.section_id === secId);
+    const timetableSlots = [];
+
+    for (const ss of sectionSubjects) {
+      const subj = this.subjects.find(s => s.id === ss.subject_id);
+      const entries = this.weekly_timetable.filter(wt =>
+        wt.section_subject_id === ss.id &&
+        wt.day_of_week === dayOfWeek &&
+        (!wt.valid_from || dateStr >= wt.valid_from) &&
+        (!wt.valid_to || dateStr <= wt.valid_to)
+      );
+
+      for (const e of entries) {
+        timetableSlots.push({
+          timetable_entry_id: e.id,
+          section_subject_id: ss.id,
+          subject_name: subj ? subj.subject_name : 'Unknown',
+          subject_code: subj ? subj.subject_code : '',
+          start_time: e.start_time,
+          end_time: e.end_time
+        });
+      }
+    }
+
+    // 2. Existing class sessions on this date for this section
+    const existingSessions = this.class_sessions.filter(cs =>
+      cs.section_id === secId && cs.session_date === dateStr
+    );
+
+    // 3. Merge timetable slots with existing sessions
+    const periods = [];
+    const matchedSessionIds = new Set();
+
+    for (const slot of timetableSlots) {
+      const existing = existingSessions.find(cs =>
+        cs.section_subject_id === slot.section_subject_id &&
+        cs.start_time === slot.start_time
+      );
+
+      if (existing) {
+        matchedSessionIds.add(existing.id);
+        const records = this.attendance_records.filter(r => r.class_session_id === existing.id);
+        const presentCount = records.filter(r => r.attendance_status === 'PRESENT').length;
+        const totalMarked = records.length;
+        const faculty = this.users.find(u => u.id === (existing.finalized_by || existing.created_by));
+
+        periods.push({
+          type: 'TIMETABLE_SLOT',
+          session_id: existing.id,
+          timetable_entry_id: slot.timetable_entry_id,
+          section_subject_id: slot.section_subject_id,
+          subject_name: slot.subject_name,
+          subject_code: slot.subject_code,
+          start_time: slot.start_time,
+          end_time: slot.end_time,
+          status: existing.status,
+          total_marked: totalMarked,
+          present_count: presentCount,
+          faculty_name: faculty ? faculty.full_name : 'Faculty Administrator',
+          finalized_at: existing.finalized_at,
+          can_start: false
+        });
+      } else {
+        periods.push({
+          type: 'TIMETABLE_SLOT',
+          session_id: null,
+          timetable_entry_id: slot.timetable_entry_id,
+          section_subject_id: slot.section_subject_id,
+          subject_name: slot.subject_name,
+          subject_code: slot.subject_code,
+          start_time: slot.start_time,
+          end_time: slot.end_time,
+          status: 'UNSCHEDULED',
+          total_marked: 0,
+          present_count: 0,
+          faculty_name: null,
+          finalized_at: null,
+          can_start: !holiday
+        });
+      }
+    }
+
+    // 4. Any ad-hoc sessions on this date not in timetable
+    for (const cs of existingSessions) {
+      if (!matchedSessionIds.has(cs.id)) {
+        const ss = this.section_subjects.find(s => s.id === cs.section_subject_id);
+        const subj = ss ? this.subjects.find(s => s.id === ss.subject_id) : null;
+        const records = this.attendance_records.filter(r => r.class_session_id === cs.id);
+        const presentCount = records.filter(r => r.attendance_status === 'PRESENT').length;
+
+        periods.push({
+          type: 'ADHOC_SESSION',
+          session_id: cs.id,
+          timetable_entry_id: cs.timetable_entry_id,
+          section_subject_id: cs.section_subject_id,
+          subject_name: subj ? subj.subject_name : 'Unknown',
+          subject_code: subj ? subj.subject_code : '',
+          start_time: cs.start_time,
+          end_time: cs.end_time,
+          status: cs.status,
+          total_marked: records.length,
+          present_count: presentCount,
+          faculty_name: 'Faculty Administrator',
+          finalized_at: cs.finalized_at,
+          can_start: false
+        });
+      }
+    }
+
+    periods.sort((a, b) => a.start_time.localeCompare(b.start_time));
+
+    return {
+      date: dateStr,
+      day_of_week: dayOfWeek,
+      is_holiday: !!holiday,
+      holiday_description: holiday ? holiday.description : null,
+      periods
+    };
+  }
+
+  getOrCreateSessionForDate({ section_id, section_subject_id, session_date, start_time, end_time, timetable_entry_id, created_by }) {
+    const existing = this.class_sessions.find(cs =>
+      cs.section_subject_id === Number(section_subject_id) &&
+      cs.session_date === session_date &&
+      cs.start_time === start_time
+    );
+
+    if (existing) return existing;
+
+    return this.createSession({
+      section_id,
+      section_subject_id,
+      session_date,
+      start_time,
+      end_time,
+      timetable_entry_id,
+      created_by
+    });
+  }
+
   // ---- Attendance Operations ----
 
   getRosterForSession(sessionId) {

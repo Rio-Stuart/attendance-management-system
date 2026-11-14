@@ -189,32 +189,65 @@
           </div>
         </div>
 
-        <!-- 2. ATTENDANCE MARKING TAB -->
+        <!-- 2. ATTENDANCE MARKING TAB (DATE-WISE) -->
         <div id="attendanceTab" class="tab-content">
           <div class="content-header">
             <div>
-              <h2>Mark & Finalize Attendance</h2>
-              <p>Session-based student attendance sheet with atomic finalization verification.</p>
+              <h2>Date-Wise Attendance Marker</h2>
+              <p>Select an academic section and date to inspect scheduled timetable periods, load rosters, and mark attendance.</p>
             </div>
           </div>
 
-          <div class="card attendance-session-select">
-            <div class="grid-3">
-              <div class="form-group">
-                <label>Select Section</label>
+          <!-- Date-Wise Selector Card -->
+          <div class="card attendance-session-select mb-4">
+            <div class="date-marker-header-grid">
+              <div class="form-group mb-0">
+                <label>Academic Section</label>
                 <select id="markingSectionSelect">
                   <option value="">Choose Section...</option>
                 </select>
               </div>
-              <div class="form-group">
-                <label>Select Class Session</label>
-                <select id="markingSessionSelect" disabled>
-                  <option value="">Select section first...</option>
-                </select>
+
+              <div class="form-group mb-0">
+                <label>Attendance Date</label>
+                <div class="date-input-with-controls">
+                  <button type="button" class="btn btn-outline btn-sm date-nav-btn" id="dateNavPrevBtn" title="Previous Day">◀ Prev</button>
+                  <input type="date" id="markingDateSelect" class="marking-date-picker">
+                  <button type="button" class="btn btn-outline btn-sm date-nav-btn" id="dateNavNextBtn" title="Next Day">Next ▶</button>
+                  <button type="button" class="btn btn-primary btn-sm date-today-btn" id="dateNavTodayBtn">Today</button>
+                </div>
               </div>
-              <div class="form-group form-actions-align">
-                <button id="loadRosterBtn" class="btn btn-primary" disabled>Load Eligible Roster</button>
+
+              <div class="date-summary-badge-container">
+                <div class="day-of-week-pill" id="markingDayOfWeekPill">Saturday</div>
+                <div class="date-meta-text" id="markingDateFormattedText">14 Nov 2026</div>
               </div>
+            </div>
+
+            <!-- Holiday Notice if applicable -->
+            <div id="markingHolidayNotice" class="tip-banner mt-3 hidden" style="background: #fff1f2; border-color: #fecdd3; color: #be123c;">
+              <span class="tip-icon" style="color: #e11d48;">🏖️</span>
+              <div>
+                <strong>University Holiday:</strong> <span id="markingHolidayDescription">No regular classes scheduled on this date.</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Periods on Selected Date Card -->
+          <div class="card mb-4" id="datePeriodsCard">
+            <div class="card-header-flex mb-3">
+              <div>
+                <h3 class="card-title">Lectures Scheduled on This Date</h3>
+                <p class="text-muted" id="datePeriodsSubtitle">Click a lecture period below to view or mark attendance:</p>
+              </div>
+              <div id="datePeriodsStats">
+                <!-- Slot count pills -->
+              </div>
+            </div>
+
+            <!-- Period Pills / Grid -->
+            <div class="periods-container" id="datePeriodsContainer">
+              <div class="loading">Select section and date above to load scheduled periods...</div>
             </div>
           </div>
 
@@ -445,6 +478,18 @@
 
         <!-- 1. STUDENT BREAKDOWN -->
         <div id="studentDashboardTab" class="tab-content active">
+          <!-- Quick Timetable Banner -->
+          <div class="student-quick-banner mb-4">
+            <div>
+              <h4>📅 My Weekly Class Timetable</h4>
+              <p>View your recurring weekly class schedule, period timings, and assigned subjects.</p>
+            </div>
+            <button type="button" class="btn btn-primary btn-sm" id="viewMyTimetableQuickBtn">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+              View Full Timetable ➔
+            </button>
+          </div>
+
           <div class="tip-banner mb-4">
             <div class="tip-icon">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
@@ -577,22 +622,32 @@
               <p>Your recurring weekly class schedule and timings for section <strong id="studentTimetableSectionName">-</strong>.</p>
             </div>
           </div>
-          <div class="table-container">
-            <table class="data-table">
-              <thead>
-                <tr>
-                  <th>Day of Week</th>
-                  <th>Subject Code</th>
-                  <th>Subject Name</th>
-                  <th>Start Time</th>
-                  <th>End Time</th>
-                  <th>Validity Period</th>
-                </tr>
-              </thead>
-              <tbody id="studentTimetableTableBody">
-                <tr><td colspan="6" class="loading">Loading timetable...</td></tr>
-              </tbody>
-            </table>
+
+          <!-- Weekly Schedule Grid View (Monday to Friday Cards) -->
+          <h3 class="card-title mb-3" style="font-size: 1rem;">Weekly Schedule Overview</h3>
+          <div class="weekly-schedule-grid" id="studentWeeklyScheduleGrid">
+            <!-- Populated dynamically with Monday-Friday cards -->
+          </div>
+
+          <!-- Full Table View -->
+          <div class="card">
+            <h3 class="card-title mb-3" style="font-size: 1rem;">Detailed Timetable Roster</h3>
+            <div class="table-container">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>DAY OF WEEK</th>
+                    <th>SUBJECT</th>
+                    <th>START TIME</th>
+                    <th>END TIME</th>
+                    <th>VALIDITY PERIOD</th>
+                  </tr>
+                </thead>
+                <tbody id="studentTimetableTableBody">
+                  <tr><td colspan="5" class="loading">Loading timetable...</td></tr>
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
       </div>

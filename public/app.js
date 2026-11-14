@@ -50,6 +50,7 @@ function setupNavigation() {
 
       // Refresh data on tab activation
       if (btn.dataset.tab === 'sessionsTab') loadSessions();
+      if (btn.dataset.tab === 'attendanceTab') initDateWiseMarker();
       if (btn.dataset.tab === 'reportsTab') loadSectionReport();
       if (btn.dataset.tab === 'timetableTab') loadTimetable();
       if (btn.dataset.tab === 'studentDashboardTab' && currentUser) loadStudentDashboard();
@@ -74,6 +75,40 @@ function setupNavigation() {
   document.getElementById('quickLoginStudent').addEventListener('click', () => {
     loginUser('student1', 'student123', 'STUDENT');
   });
+}
+
+// ---- FORMATTING HELPERS ----
+function formatAcademicDate(dateStr) {
+  if (!dateStr) return '-';
+  const cleanStr = String(dateStr).split('T')[0];
+  const parts = cleanStr.split('-');
+  if (parts.length !== 3) return cleanStr;
+  const year = parts[0];
+  const monthIdx = parseInt(parts[1], 10) - 1;
+  const day = parts[2].padStart(2, '0');
+  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  const monthName = months[monthIdx] || parts[1];
+  return `${day} ${monthName} ${year}`;
+}
+
+function formatValidityPeriod(validFrom, validTo) {
+  if (!validFrom || !validTo) return '—';
+  const fromFormatted = formatAcademicDate(validFrom);
+  const toFormatted = formatAcademicDate(validTo);
+  return `<span class="validity-chip"><span class="validity-icon">📅</span>${fromFormatted} &mdash; ${toFormatted}</span>`;
+}
+
+function formatTime12h(timeStr) {
+  if (!timeStr) return '';
+  const parts = String(timeStr).split(':');
+  if (parts.length < 2) return timeStr;
+  let hours = parseInt(parts[0], 10);
+  const minutes = parts[1].padStart(2, '0');
+  const ampm = hours >= 12 ? 'PM' : 'AM';
+  hours = hours % 12;
+  hours = hours ? hours : 12;
+  const strHours = String(hours).padStart(2, '0');
+  return `${strHours}:${minutes} ${ampm}`;
 }
 
 // ---- AUTHENTICATION ----
@@ -316,28 +351,17 @@ function setupForms() {
     }
   });
 
-  // Attendance Section Picker cascade
-  document.getElementById('markingSectionSelect').addEventListener('change', async e => {
-    const secId = e.target.value;
-    const sessionSelect = document.getElementById('markingSessionSelect');
-    const loadBtn = document.getElementById('loadRosterBtn');
-    if (!secId) {
-      sessionSelect.disabled = true;
-      loadBtn.disabled = true;
-      return;
-    }
-    const res = await fetch(`${API_BASE}/sessions?sectionId=${secId}`);
-    const data = await res.json();
-    sessionSelect.innerHTML = data.data.map(s => `
-      <option value="${s.id}">#${s.id} &bull; ${s.session_date} ${s.start_time}-${s.end_time} &bull; ${s.subject_name} [${s.status}]</option>
-    `).join('');
-    sessionSelect.disabled = false;
-    loadBtn.disabled = false;
-  });
+  // Date-wise attendance marker controls
+  document.getElementById('markingSectionSelect')?.addEventListener('change', () => loadDateSessions());
+  document.getElementById('markingDateSelect')?.addEventListener('change', () => loadDateSessions());
+  document.getElementById('dateNavPrevBtn')?.addEventListener('click', () => changeMarkingDate(-1));
+  document.getElementById('dateNavNextBtn')?.addEventListener('click', () => changeMarkingDate(1));
+  document.getElementById('dateNavTodayBtn')?.addEventListener('click', () => changeMarkingDate(0));
 
-  document.getElementById('loadRosterBtn').addEventListener('click', () => {
-    const sessionId = document.getElementById('markingSessionSelect').value;
-    if (sessionId) loadRoster(sessionId);
+  // Quick timetable button from student dashboard
+  document.getElementById('viewMyTimetableQuickBtn')?.addEventListener('click', () => {
+    const studentTtTabBtn = document.querySelector('.tab-btn[data-tab="studentTimetableTab"]');
+    if (studentTtTabBtn) studentTtTabBtn.click();
   });
 
   // Bulk buttons
@@ -396,6 +420,7 @@ async function loadAdminInit() {
   await loadSectionsDropdown('reportSectionSelect');
   await loadSectionsDropdown('timetableSectionSelect');
   loadSessions();
+  initDateWiseMarker();
 }
 
 async function loadSectionsDropdown(selectId, triggerChange = false) {
@@ -447,7 +472,7 @@ async function loadSessions() {
       return `
         <tr>
           <td><span class="subject-code-badge">#${s.id}</span></td>
-          <td><strong>${s.session_date}</strong><br><small class="text-muted">${s.start_time} - ${s.end_time}</small></td>
+          <td><strong>${formatAcademicDate(s.session_date)}</strong><br><small class="text-muted">${formatTime12h(s.start_time)} – ${formatTime12h(s.end_time)}</small></td>
           <td>${s.section_name}</td>
           <td><strong>${s.subject_name}</strong><br><small class="text-muted">${s.subject_code}</small></td>
           <td><span class="badge badge-${s.status.toLowerCase()}">${s.status}</span></td>
@@ -472,23 +497,244 @@ async function loadSessions() {
   }
 }
 
-function switchToMarking(sectionId, sessionId) {
-  // Switch tab
-  document.querySelector('.tab-btn[data-tab="attendanceTab"]').click();
-  const secSelect = document.getElementById('markingSectionSelect');
-  secSelect.value = sectionId;
-  secSelect.dispatchEvent(new Event('change'));
+async function switchToMarking(sectionId, sessionId) {
+  // Switch to attendance tab
+  const attBtn = document.querySelector('.tab-btn[data-tab="attendanceTab"]');
+  if (attBtn) attBtn.click();
 
-  setTimeout(() => {
-    document.getElementById('markingSessionSelect').value = sessionId;
-    loadRoster(sessionId);
-  }, 300);
+  const secSelect = document.getElementById('markingSectionSelect');
+  if (secSelect) secSelect.value = sectionId;
+
+  // Retrieve session date
+  try {
+    const res = await fetch(`${API_BASE}/sessions/${sessionId}/roster`);
+    const data = await res.json();
+    if (data.success && data.session) {
+      const dateInput = document.getElementById('markingDateSelect');
+      if (dateInput) dateInput.value = data.session.session_date;
+    }
+  } catch (e) {
+    console.error('Error fetching session date for marker navigation:', e);
+  }
+
+  await loadDateSessions();
+  selectDatePeriod(sessionId);
 }
 
 function openCancelModal(sessionId) {
   document.getElementById('cancelSessionId').value = sessionId;
   document.getElementById('cancelReasonInput').value = '';
   document.getElementById('cancelModal').classList.remove('hidden');
+}
+
+// ---- DATE-WISE ATTENDANCE MARKER ----
+let currentDatePeriods = [];
+
+function changeMarkingDate(offset) {
+  const input = document.getElementById('markingDateSelect');
+  if (!input) return;
+  if (offset === 0) {
+    input.value = new Date().toISOString().split('T')[0];
+  } else {
+    const curVal = input.value || new Date().toISOString().split('T')[0];
+    const d = new Date(curVal + 'T00:00:00');
+    d.setDate(d.getDate() + offset);
+    input.value = d.toISOString().split('T')[0];
+  }
+  loadDateSessions();
+}
+
+async function initDateWiseMarker() {
+  const dateInput = document.getElementById('markingDateSelect');
+  if (dateInput && !dateInput.value) {
+    dateInput.value = new Date().toISOString().split('T')[0];
+  }
+  const secSelect = document.getElementById('markingSectionSelect');
+  if (secSelect && !secSelect.value && secSelect.options.length > 0) {
+    if (!secSelect.options[0].value && secSelect.options.length > 1) {
+      secSelect.value = secSelect.options[1].value;
+    } else if (secSelect.options[0].value) {
+      secSelect.value = secSelect.options[0].value;
+    }
+  }
+  loadDateSessions();
+}
+
+async function loadDateSessions() {
+  const secSelect = document.getElementById('markingSectionSelect');
+  const dateInput = document.getElementById('markingDateSelect');
+  if (!secSelect || !dateInput) return;
+
+  const sectionId = secSelect.value;
+  const dateStr = dateInput.value || new Date().toISOString().split('T')[0];
+  dateInput.value = dateStr;
+
+  // Update header pill and date text
+  const dObj = new Date(dateStr + 'T00:00:00');
+  const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+  const dayName = days[dObj.getDay()];
+  const pillEl = document.getElementById('markingDayOfWeekPill');
+  if (pillEl) pillEl.textContent = dayName;
+  const formattedEl = document.getElementById('markingDateFormattedText');
+  if (formattedEl) formattedEl.textContent = formatAcademicDate(dateStr);
+
+  const container = document.getElementById('datePeriodsContainer');
+  const statsEl = document.getElementById('datePeriodsStats');
+  const holidayNotice = document.getElementById('markingHolidayNotice');
+  const holidayDesc = document.getElementById('markingHolidayDescription');
+
+  if (!sectionId) {
+    if (container) container.innerHTML = '<div class="loading">Please select an academic section above to view lectures.</div>';
+    if (statsEl) statsEl.innerHTML = '';
+    return;
+  }
+
+  if (container) container.innerHTML = '<div class="loading">Checking timetable & scheduled lectures for this date...</div>';
+
+  try {
+    const res = await fetch(`${API_BASE}/sessions/date-summary?sectionId=${sectionId}&date=${dateStr}`);
+    const data = await res.json();
+    if (!data.success) throw new Error(data.message);
+
+    const summary = data.data;
+    currentDatePeriods = summary.periods || [];
+
+    // Holiday notice
+    if (summary.is_holiday) {
+      if (holidayNotice) holidayNotice.classList.remove('hidden');
+      if (holidayDesc) holidayDesc.textContent = summary.holiday_description || 'University Holiday';
+    } else {
+      if (holidayNotice) holidayNotice.classList.add('hidden');
+    }
+
+    // Stats badge
+    if (statsEl) {
+      const scheduledCount = currentDatePeriods.filter(p => p.status !== 'UNSCHEDULED').length;
+      const finalizedCount = currentDatePeriods.filter(p => p.status === 'FINALIZED').length;
+      statsEl.innerHTML = `
+        <span class="badge badge-sm" style="background:#e0e7ff;color:#4338ca;">${currentDatePeriods.length} Total Slot(s)</span>
+        <span class="badge badge-sm badge-success">${finalizedCount} Finalized</span>
+      `;
+    }
+
+    if (currentDatePeriods.length === 0) {
+      if (container) {
+        container.innerHTML = `
+          <div class="card p-4 text-center text-muted" style="grid-column: 1 / -1;">
+            <p><strong>No recurring timetable lectures scheduled on ${dayName}.</strong></p>
+            <p style="font-size: 0.85rem;">If an extra/make-up class was conducted today, use the <em>Create Session</em> button in the Class Sessions tab.</p>
+          </div>
+        `;
+      }
+      return;
+    }
+
+    if (container) {
+      container.innerHTML = currentDatePeriods.map(p => {
+        const isSelected = currentActiveSession && currentActiveSession.id === p.session_id;
+        const isFinal = p.status === 'FINALIZED';
+        const isDraft = p.status === 'DRAFT';
+        const isScheduled = p.status === 'SCHEDULED';
+        const isUnscheduled = p.status === 'UNSCHEDULED';
+
+        let badgeClass = 'badge-draft';
+        if (isFinal) badgeClass = 'badge-finalized';
+        else if (isScheduled) badgeClass = 'badge-scheduled';
+        else if (isUnscheduled) badgeClass = '';
+
+        return `
+          <div class="period-card ${isSelected ? 'active' : ''} ${isUnscheduled ? 'unscheduled' : ''}" id="periodCard_${p.session_id || p.timetable_entry_id}" onclick="handlePeriodCardClick(${p.session_id || 'null'}, ${p.section_subject_id}, '${p.start_time}', '${p.end_time}', ${p.timetable_entry_id || 'null'})">
+            <div>
+              <div class="period-card-top">
+                <span class="period-time-badge">${formatTime12h(p.start_time)} – ${formatTime12h(p.end_time)}</span>
+                <span class="badge ${badgeClass}" style="${isUnscheduled ? 'background:#e2e8f0;color:#475569;' : ''}">${p.status}</span>
+              </div>
+              <div class="period-title">${p.subject_name}</div>
+              <div class="period-code">${p.subject_code}</div>
+            </div>
+            <div class="period-card-bottom">
+              <div class="period-status-meta">
+                ${isUnscheduled 
+                  ? '<em>Timetable Slot Ready</em>' 
+                  : `${p.total_marked > 0 ? `<strong>${p.present_count} / ${p.total_marked}</strong> marked` : 'Roster pending'}`}
+              </div>
+              <div>
+                ${isUnscheduled ? `
+                  <button type="button" class="btn btn-primary btn-sm" onclick="event.stopPropagation(); startTimetablePeriod(${p.section_subject_id}, '${p.start_time}', '${p.end_time}', ${p.timetable_entry_id})">
+                    Start & Mark
+                  </button>
+                ` : `
+                  <button type="button" class="btn btn-outline btn-sm" onclick="event.stopPropagation(); selectDatePeriod(${p.session_id})">
+                    ${isFinal ? 'Inspect Roster' : 'Mark Attendance'}
+                  </button>
+                `}
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+  } catch (err) {
+    if (container) container.innerHTML = `<div class="text-danger p-3">${err.message}</div>`;
+  }
+}
+
+async function handlePeriodCardClick(sessionId, sectionSubjectId, startTime, endTime, timetableEntryId) {
+  if (sessionId) {
+    selectDatePeriod(sessionId);
+  } else {
+    await startTimetablePeriod(sectionSubjectId, startTime, endTime, timetableEntryId);
+  }
+}
+
+async function startTimetablePeriod(sectionSubjectId, startTime, endTime, timetableEntryId) {
+  const secSelect = document.getElementById('markingSectionSelect');
+  const dateInput = document.getElementById('markingDateSelect');
+  const sectionId = secSelect ? secSelect.value : null;
+  const sessionDate = dateInput ? dateInput.value : new Date().toISOString().split('T')[0];
+
+  if (!sectionId) return showToast('Please select a section', 'error');
+
+  try {
+    const res = await fetch(`${API_BASE}/sessions/start-for-date`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        section_id: Number(sectionId),
+        section_subject_id: Number(sectionSubjectId),
+        session_date: sessionDate,
+        start_time: startTime,
+        end_time: endTime,
+        timetable_entry_id: timetableEntryId || null,
+        created_by: currentUser ? currentUser.id : null
+      })
+    });
+    const data = await res.json();
+    if (!data.success) throw new Error(data.message);
+
+    showToast('Session activated for attendance marking', 'success');
+    await loadDateSessions();
+    if (data.data && data.data.id) {
+      selectDatePeriod(data.data.id);
+    }
+  } catch (err) {
+    showToast(err.message, 'error');
+  }
+}
+
+async function selectDatePeriod(sessionId) {
+  document.querySelectorAll('.period-card').forEach(c => c.classList.remove('active'));
+  const card = document.getElementById(`periodCard_${sessionId}`);
+  if (card) card.classList.add('active');
+
+  const infoCard = document.getElementById('activeSessionInfo');
+  if (infoCard) infoCard.classList.remove('hidden');
+
+  await loadRoster(sessionId);
+
+  if (infoCard) {
+    infoCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
 }
 
 // ---- ATTENDANCE ROSTER & MARKING ----
@@ -512,8 +758,8 @@ async function loadRoster(sessionId) {
 
     document.getElementById('infoSection').textContent = sec ? sec.section_name : '-';
     document.getElementById('infoSubject').textContent = ss ? `${ss.subject_name} (${ss.subject_code})` : '-';
-    document.getElementById('infoDate').textContent = currentActiveSession.session_date;
-    document.getElementById('infoTime').textContent = `${currentActiveSession.start_time} - ${currentActiveSession.end_time}`;
+    document.getElementById('infoDate').textContent = formatAcademicDate(currentActiveSession.session_date);
+    document.getElementById('infoTime').textContent = `${formatTime12h(currentActiveSession.start_time)} – ${formatTime12h(currentActiveSession.end_time)}`;
     const badge = document.getElementById('infoStatusBadge');
     badge.textContent = currentActiveSession.status;
     badge.className = `badge badge-${currentActiveSession.status.toLowerCase()}`;
@@ -599,7 +845,8 @@ async function saveDraftAttendance() {
     if (!data.success) throw new Error(data.message);
 
     showToast('Draft attendance saved successfully');
-    loadRoster(currentActiveSession.id);
+    await loadRoster(currentActiveSession.id);
+    loadDateSessions();
   } catch (err) {
     showToast(err.message, 'error');
   }
@@ -628,7 +875,8 @@ async function finalizeAttendance() {
     if (!data.success) throw new Error(data.message);
 
     showToast('Session finalized! All attendance records committed to calculations.');
-    loadRoster(currentActiveSession.id);
+    await loadRoster(currentActiveSession.id);
+    loadDateSessions();
   } catch (err) {
     showToast(err.message, 'error');
   }
@@ -732,7 +980,8 @@ function exportDefaultersCsv() {
 
 // ---- TIMETABLE TAB ----
 async function loadTimetable() {
-  const sectionId = document.getElementById('timetableSectionSelect').value;
+  const sectionSelect = document.getElementById('timetableSectionSelect');
+  const sectionId = sectionSelect ? sectionSelect.value : null;
   if (!sectionId) return;
 
   const tbody = document.getElementById('timetableTableBody');
@@ -745,13 +994,20 @@ async function loadTimetable() {
       return;
     }
 
-    tbody.innerHTML = data.data.map(wt => `
+    const dayOrder = { 'MONDAY': 1, 'TUESDAY': 2, 'WEDNESDAY': 3, 'THURSDAY': 4, 'FRIDAY': 5, 'SATURDAY': 6, 'SUNDAY': 7 };
+    const sorted = [...data.data].sort((a, b) => {
+      const dDiff = (dayOrder[a.day_of_week] || 0) - (dayOrder[b.day_of_week] || 0);
+      if (dDiff !== 0) return dDiff;
+      return (a.start_time || '').localeCompare(b.start_time || '');
+    });
+
+    tbody.innerHTML = sorted.map(wt => `
       <tr>
         <td><strong>${wt.day_of_week}</strong></td>
-        <td>${wt.subject_name} (${wt.subject_code})</td>
-        <td>${wt.start_time}</td>
-        <td>${wt.end_time}</td>
-        <td><small class="text-muted">${wt.valid_from} to ${wt.valid_to}</small></td>
+        <td><strong>${wt.subject_name}</strong> <span class="text-muted">(${wt.subject_code})</span></td>
+        <td><code>${formatTime12h(wt.start_time)}</code></td>
+        <td><code>${formatTime12h(wt.end_time)}</code></td>
+        <td>${formatValidityPeriod(wt.valid_from, wt.valid_to)}</td>
       </tr>
     `).join('');
   } catch (err) {
@@ -874,8 +1130,8 @@ function renderSubjectHistoryTable(filter = 'ALL') {
   tbody.innerHTML = list.map((s, idx) => `
     <tr>
       <td><span class="subject-code-badge">#${list.length - idx}</span></td>
-      <td><strong>${s.session_date}</strong> <span class="text-muted">(${s.day_of_week})</span></td>
-      <td><code>${s.start_time} - ${s.end_time}</code></td>
+      <td><strong>${formatAcademicDate(s.session_date)}</strong> <span class="text-muted">(${s.day_of_week})</span></td>
+      <td><code>${formatTime12h(s.start_time)} – ${formatTime12h(s.end_time)}</code></td>
       <td>
         <span class="badge ${s.attendance_status === 'PRESENT' ? 'badge-present' : 'badge-absent'}">
           ${s.attendance_status === 'PRESENT' ? '✓ PRESENT' : '✗ ABSENT'}
@@ -891,7 +1147,9 @@ function renderSubjectHistoryTable(filter = 'ALL') {
 async function loadStudentTimetable() {
   if (!currentUser) return;
   const tbody = document.getElementById('studentTimetableTableBody');
-  tbody.innerHTML = '<tr><td colspan="6" class="loading">Loading weekly timetable...</td></tr>';
+  const gridEl = document.getElementById('studentWeeklyScheduleGrid');
+  if (tbody) tbody.innerHTML = '<tr><td colspan="5" class="loading">Loading weekly timetable...</td></tr>';
+  if (gridEl) gridEl.innerHTML = '<div class="loading">Loading weekly schedule...</div>';
 
   try {
     const dRes = await fetch(`${API_BASE}/students/${currentUser.id}/dashboard`);
@@ -907,7 +1165,8 @@ async function loadStudentTimetable() {
     if (!data.success) throw new Error(data.message);
 
     if (data.data.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="6" class="loading">No timetable slots found for your section.</td></tr>';
+      if (tbody) tbody.innerHTML = '<tr><td colspan="5" class="loading">No timetable slots found for your section.</td></tr>';
+      if (gridEl) gridEl.innerHTML = '<div class="card p-4 text-center text-muted" style="grid-column: 1 / -1;">No timetable entries configured.</div>';
       return;
     }
 
@@ -915,21 +1174,51 @@ async function loadStudentTimetable() {
     const sorted = [...data.data].sort((a, b) => {
       const dDiff = (dayOrder[a.day_of_week] || 0) - (dayOrder[b.day_of_week] || 0);
       if (dDiff !== 0) return dDiff;
-      return a.start_time.localeCompare(b.start_time);
+      return (a.start_time || '').localeCompare(b.start_time || '');
     });
 
-    tbody.innerHTML = sorted.map(wt => `
-      <tr>
-        <td><strong>${wt.day_of_week}</strong></td>
-        <td><span class="subject-code-badge">${wt.subject_code}</span></td>
-        <td><strong>${wt.subject_name}</strong></td>
-        <td><code>${wt.start_time}</code></td>
-        <td><code>${wt.end_time}</code></td>
-        <td><small class="text-muted">${wt.valid_from} to ${wt.valid_to}</small></td>
-      </tr>
-    `).join('');
+    // 1. Render Student Weekly Schedule Day Cards (Monday through Friday)
+    if (gridEl) {
+      const weekdays = ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY'];
+      gridEl.innerHTML = weekdays.map(day => {
+        const slots = sorted.filter(s => s.day_of_week === day);
+        return `
+          <div class="day-schedule-card">
+            <div class="day-schedule-header">
+              <span>${day}</span>
+              <span class="badge badge-sm" style="font-size: 0.7rem;">${slots.length} lecture${slots.length === 1 ? '' : 's'}</span>
+            </div>
+            <div class="day-schedule-body">
+              ${slots.length === 0 
+                ? '<div class="day-empty-text">No lectures scheduled</div>' 
+                : slots.map(slot => `
+                  <div class="scheduled-lecture-item">
+                    <div class="lec-time">${formatTime12h(slot.start_time)} – ${formatTime12h(slot.end_time)}</div>
+                    <div class="lec-subject">${slot.subject_name}</div>
+                    <div class="text-muted" style="font-size: 0.72rem;">${slot.subject_code}</div>
+                  </div>
+                `).join('')
+              }
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    // 2. Render Structured Table View with clean date/time formatting
+    if (tbody) {
+      tbody.innerHTML = sorted.map(wt => `
+        <tr>
+          <td><strong>${wt.day_of_week}</strong></td>
+          <td><span class="subject-code-badge">${wt.subject_code}</span> <strong>${wt.subject_name}</strong></td>
+          <td><code>${formatTime12h(wt.start_time)}</code></td>
+          <td><code>${formatTime12h(wt.end_time)}</code></td>
+          <td>${formatValidityPeriod(wt.valid_from, wt.valid_to)}</td>
+        </tr>
+      `).join('');
+    }
   } catch (err) {
-    tbody.innerHTML = `<tr><td colspan="6" class="text-danger">${err.message}</td></tr>`;
+    if (tbody) tbody.innerHTML = `<tr><td colspan="5" class="text-danger">${err.message}</td></tr>`;
   }
 }
 
@@ -1047,8 +1336,8 @@ function renderUpcomingSessionsTable() {
     return `
       <tr class="upcoming-session-row">
         <td><span class="subject-code-badge">#${idx + 1}</span></td>
-        <td><strong>${s.session_date}</strong> <span class="text-muted">(${s.day_of_week})</span></td>
-        <td><code>${s.start_time} - ${s.end_time}</code></td>
+        <td><strong>${formatAcademicDate(s.session_date)}</strong> <span class="text-muted">(${s.day_of_week})</span></td>
+        <td><code>${formatTime12h(s.start_time)} – ${formatTime12h(s.end_time)}</code></td>
         <td>${s.subject_name} (${s.subject_code})</td>
         <td>
           <div class="decision-toggle-group">

@@ -207,6 +207,35 @@ app.get('/api/sessions', async (req, res) => {
   }
 });
 
+app.get('/api/sessions/date-summary', async (req, res) => {
+  try {
+    const sectionId = Number(req.query.sectionId);
+    const dateStr = req.query.date || new Date().toISOString().split('T')[0];
+    if (!sectionId) {
+      return res.status(400).json({ success: false, message: 'sectionId is required' });
+    }
+    const { type, db } = getBackend();
+    const summary = type === 'postgres'
+      ? await db.getDateSessionsSummary(sectionId, dateStr)
+      : db.getDateSessionsSummary(sectionId, dateStr);
+    res.json({ success: true, data: summary });
+  } catch (err) {
+    res.status(400).json({ success: false, message: err.message });
+  }
+});
+
+app.post('/api/sessions/start-for-date', async (req, res) => {
+  try {
+    const { type, db } = getBackend();
+    const session = type === 'postgres'
+      ? await db.getOrCreateSessionForDate(req.body)
+      : db.getOrCreateSessionForDate(req.body);
+    res.json({ success: true, message: 'Session ready for attendance', data: session });
+  } catch (err) {
+    res.status(400).json({ success: false, message: err.message });
+  }
+});
+
 app.post('/api/sessions', async (req, res) => {
   try {
     const { type, db } = getBackend();
