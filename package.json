@@ -9,6 +9,7 @@
     "test:java": "test.bat"
   },
   "dependencies": {
+    "@netlify/database": "^2.0.3",
     "cors": "^2.8.5",
     "express": "^4.19.2",
     "serverless-http": "^3.2.0"
