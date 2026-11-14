@@ -262,13 +262,18 @@ app.post('/api/sessions/:id/cancel', async (req, res) => {
 app.get('/api/sessions/:id/roster', async (req, res) => {
   try {
     const { type, db } = getBackend();
+    let session, roster;
     if (type === 'postgres') {
-      const { session, roster } = await db.getRosterForSession(req.params.id);
-      return res.json({ success: true, session, data: roster });
+      const resData = await db.getRosterForSession(req.params.id);
+      session = resData.session;
+      roster = resData.roster;
+    } else {
+      roster = db.getRosterForSession(req.params.id);
+      session = db.class_sessions.find(s => s.id === Number(req.params.id));
     }
-
-    const roster = db.getRosterForSession(req.params.id);
-    const session = db.class_sessions.find(s => s.id === Number(req.params.id));
+    if (session && typeof db.getSessionFinalizeWindow === 'function') {
+      session.finalize_window = db.getSessionFinalizeWindow(session);
+    }
     res.json({ success: true, session, data: roster });
   } catch (err) {
     res.status(400).json({ success: false, message: err.message });

@@ -111,6 +111,47 @@ function formatTime12h(timeStr) {
   return `${strHours}:${minutes} ${ampm}`;
 }
 
+// Check session attendance finalization eligibility window:
+// Invariant: Future sessions cannot be finalised in advance.
+// They can be finalised only manually during the session period or up to 3 days from the original session end time.
+function getSessionFinalizeWindow(session) {
+  if (!session || !session.session_date) {
+    return { canFinalize: false, isFuture: false, isExpired: false, isLive: false, isWithinGrace: false };
+  }
+  const dateStr = session.session_date.includes('T') ? session.session_date.split('T')[0] : session.session_date;
+  const startTime = (session.start_time || '00:00').substring(0, 5);
+  const endTime = (session.end_time || '23:59').substring(0, 5);
+
+  const startDt = new Date(`${dateStr}T${startTime}:00`);
+  let endDt = new Date(`${dateStr}T${endTime}:00`);
+  if (endDt < startDt) {
+    endDt = new Date(endDt.getTime() + 24 * 60 * 60 * 1000);
+  }
+  const maxFinalizeDt = new Date(endDt.getTime() + 3 * 24 * 60 * 60 * 1000);
+  const now = new Date();
+
+  const isFuture = now < startDt;
+  const isLive = now >= startDt && now <= endDt;
+  const isWithinGrace = now > endDt && now <= maxFinalizeDt;
+  const isExpired = now > maxFinalizeDt;
+  const isFinalized = session.status === 'FINALIZED';
+  const isCancelled = session.status === 'CANCELLED';
+  const canFinalize = (isLive || isWithinGrace) && !isFinalized && !isCancelled;
+
+  return {
+    startDt,
+    endDt,
+    maxFinalizeDt,
+    isFuture,
+    isLive,
+    isWithinGrace,
+    isExpired,
+    isFinalized,
+    isCancelled,
+    canFinalize
+  };
+}
+
 // ---- AUTHENTICATION ----
 async function loginUser(username, password, role) {
   try {
@@ -642,6 +683,20 @@ async function loadDateSessions() {
         else if (isScheduled) badgeClass = 'badge-scheduled';
         else if (isUnscheduled) badgeClass = '';
 
+        const win = getSessionFinalizeWindow({ session_date: dateStr, start_time: p.start_time, end_time: p.end_time, status: p.status });
+        let statusTag = '';
+        if (isFinal) {
+          statusTag = '<span style="font-size:0.72rem;background:#dcfce7;color:#166534;padding:2px 6px;border-radius:4px;font-weight:600;">Finalized</span>';
+        } else if (win.isFuture) {
+          statusTag = '<span style="font-size:0.72rem;background:#fef3c7;color:#92400e;padding:2px 6px;border-radius:4px;" title="Cannot finalize in advance. Opens during session or up to 3 days after.">🔒 Future (Finalize during class)</span>';
+        } else if (win.isLive) {
+          statusTag = '<span style="font-size:0.72rem;background:#dbeafe;color:#1e40af;padding:2px 6px;border-radius:4px;font-weight:600;">🔴 Live (Ready)</span>';
+        } else if (win.isWithinGrace) {
+          statusTag = '<span style="font-size:0.72rem;background:#ede9fe;color:#5b21b6;padding:2px 6px;border-radius:4px;">⏳ Finalize Window Open</span>';
+        } else if (win.isExpired) {
+          statusTag = '<span style="font-size:0.72rem;background:#fee2e2;color:#991b1b;padding:2px 6px;border-radius:4px;">⚠️ Window Expired</span>';
+        }
+
         return `
           <div class="period-card ${isSelected ? 'active' : ''} ${isUnscheduled ? 'unscheduled' : ''}" id="periodCard_${p.session_id || p.timetable_entry_id}" onclick="handlePeriodCardClick(${p.session_id || 'null'}, ${p.section_subject_id}, '${p.start_time}', '${p.end_time}', ${p.timetable_entry_id || 'null'})">
             <div>
@@ -656,7 +711,7 @@ async function loadDateSessions() {
               <div class="period-status-meta">
                 ${isUnscheduled 
                   ? '<em>Timetable Slot Ready</em>' 
-                  : `${p.total_marked > 0 ? `<strong>${p.present_count} / ${p.total_marked}</strong> marked` : 'Roster pending'}`}
+                  : `<div>${p.total_marked > 0 ? `<strong>${p.present_count} / ${p.total_marked}</strong> marked` : 'Roster pending'}</div><div class="mt-1">${statusTag}</div>`}
               </div>
               <div>
                 ${isUnscheduled ? `
@@ -776,6 +831,43 @@ async function loadRoster(sessionId) {
 function renderRosterTable() {
   const tbody = document.getElementById('rosterTableBody');
   const isFinalized = currentActiveSession.status === 'FINALIZED';
+  const win = getSessionFinalizeWindow(currentActiveSession);
+
+  // Render Window Notice banner above the roster table
+  const bannerContainer = document.getElementById('rosterFinalizeWindowBanner');
+  if (bannerContainer) {
+    if (isFinalized) {
+      bannerContainer.innerHTML = `
+        <div class="tip-banner mb-3" style="background:#f1f5f9;border-color:#cbd5e1;color:#334155;">
+          <div class="tip-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></div>
+          <div><strong>Session Finalized:</strong> Attendance is committed to student academic records. Modifications require administrator audit reason.</div>
+        </div>
+      `;
+    } else if (win.isFuture) {
+      bannerContainer.innerHTML = `
+        <div class="tip-banner mb-3" style="background:#fffbeb;border-color:#fde68a;color:#92400e;">
+          <div class="tip-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div>
+          <div><strong>Future Session Notice:</strong> The attendance of future sessions cannot be finalised from now. They can be finalised only after manual finalising during the session period (${formatTime12h(currentActiveSession.start_time)} – ${formatTime12h(currentActiveSession.end_time)}) or up to 3 days from the original session end time only.</div>
+        </div>
+      `;
+    } else if (win.isExpired) {
+      bannerContainer.innerHTML = `
+        <div class="tip-banner mb-3" style="background:#fef2f2;border-color:#fecaca;color:#991b1b;">
+          <div class="tip-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg></div>
+          <div><strong>Finalization Window Expired:</strong> This session ended over 3 days ago. Attendance can no longer be finalized (allowed only during session or up to 3 days from session end time).</div>
+        </div>
+      `;
+    } else if (win.canFinalize) {
+      bannerContainer.innerHTML = `
+        <div class="tip-banner mb-3" style="background:#f0fdf4;border-color:#bbf7d0;color:#166534;">
+          <div class="tip-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg></div>
+          <div><strong>Finalization Window Active:</strong> ${win.isLive ? 'Session is currently in progress.' : 'Session is within the 3-day post-session finalization window.'} 100% of students must be marked before finalizing.</div>
+        </div>
+      `;
+    } else {
+      bannerContainer.innerHTML = '';
+    }
+  }
 
   tbody.innerHTML = currentRoster.map(item => `
     <tr>
@@ -807,9 +899,29 @@ function renderRosterTable() {
     </tr>
   `).join('');
 
-  // Disable buttons if already finalized
+  // Update button states
+  const finalizeBtn = document.getElementById('finalizeAttendanceBtn');
+  if (finalizeBtn) {
+    if (isFinalized) {
+      finalizeBtn.disabled = true;
+      finalizeBtn.textContent = 'Session Finalized';
+      finalizeBtn.title = 'Session is already finalized';
+    } else if (win.isFuture) {
+      finalizeBtn.disabled = true;
+      finalizeBtn.textContent = '🔒 Finalize Locked (Future Session)';
+      finalizeBtn.title = 'Cannot finalize future sessions from now. Opens during session or up to 3 days after.';
+    } else if (win.isExpired) {
+      finalizeBtn.disabled = true;
+      finalizeBtn.textContent = '⚠️ Window Expired (> 3 Days)';
+      finalizeBtn.title = 'Finalization window expired (exceeded 3 days from session end time)';
+    } else {
+      finalizeBtn.disabled = false;
+      finalizeBtn.textContent = 'Finalize Attendance (Atomic)';
+      finalizeBtn.title = 'Atomically finalize attendance and commit to official calculations';
+    }
+  }
+
   document.getElementById('saveDraftBtn').disabled = isFinalized;
-  document.getElementById('finalizeAttendanceBtn').disabled = isFinalized;
   document.getElementById('markAllPresentBtn').disabled = isFinalized;
   document.getElementById('markAllAbsentBtn').disabled = isFinalized;
 }
@@ -854,6 +966,22 @@ async function saveDraftAttendance() {
 
 async function finalizeAttendance() {
   if (!currentActiveSession) return;
+
+  const win = getSessionFinalizeWindow(currentActiveSession);
+  if (win.isFuture) {
+    showToast(
+      `Cannot finalize future session from now. Finalization is only allowed manually during the session (${formatTime12h(currentActiveSession.start_time)} – ${formatTime12h(currentActiveSession.end_time)}) or up to 3 days after original session end time.`,
+      'error'
+    );
+    return;
+  }
+  if (win.isExpired) {
+    showToast(
+      'Cannot finalize: the 3-day finalization window from the original session end time has expired.',
+      'error'
+    );
+    return;
+  }
 
   // Pre-check for completeness
   const unmarked = currentRoster.filter(r => !r.status);
@@ -1242,9 +1370,12 @@ async function initPredictor() {
     if (!dData.success) return;
 
     const select = document.getElementById('predictorSubjectSelect');
-    select.innerHTML = dData.data.subjects.map(s => `
-      <option value="${s.section_subject_id}">${s.subject_name} (${s.subject_code})</option>
-    `).join('');
+    select.innerHTML = `
+      <option value="all" selected>All Subjects (Overall Attendance)</option>
+      ${dData.data.subjects.map(s => `
+        <option value="${s.section_subject_id}">${s.subject_name} (${s.subject_code})</option>
+      `).join('')}
+    `;
 
     // Default target date to 30 days ahead if not set
     const dateInput = document.getElementById('predictorUntilDate');
@@ -1263,25 +1394,50 @@ async function initPredictor() {
 
 async function detectUpcomingClasses() {
   if (!currentUser) return;
-  const ssId = document.getElementById('predictorSubjectSelect').value;
-  const untilDate = document.getElementById('predictorUntilDate').value;
-  if (!ssId) return;
+  const ssId = document.getElementById('predictorSubjectSelect')?.value || 'all';
+  const untilDate = document.getElementById('predictorUntilDate')?.value;
+  if (!untilDate) return;
 
   const tbody = document.getElementById('upcomingSessionsTableBody');
   tbody.innerHTML = '<tr><td colspan="5" class="loading">Detecting scheduled classes from weekly timetable...</td></tr>';
   document.getElementById('interactivePredictorContainer').classList.remove('hidden');
 
   try {
-    // 1. Fetch current subject baseline stats from student dashboard
+    // 1. Fetch current baseline stats from student dashboard
     const dashRes = await fetch(`${API_BASE}/students/${currentUser.id}/dashboard`);
     const dashData = await dashRes.json();
-    const currSubj = dashData.data.subjects.find(s => s.section_subject_id === Number(ssId));
-    if (currSubj) {
+    if (!dashData.success) throw new Error(dashData.message);
+
+    if (ssId === 'all') {
       currentSubjectBaseline = {
-        attended: currSubj.attended,
-        conducted: currSubj.conducted,
-        percentage: currSubj.percentage
+        isOverall: true,
+        name: 'All Subjects (Overall Attendance)',
+        attended: dashData.data.overall.totalAttended,
+        conducted: dashData.data.overall.totalConducted,
+        percentage: dashData.data.overall.overallPercentage,
+        subjects: dashData.data.subjects || []
       };
+    } else {
+      const currSubj = (dashData.data.subjects || []).find(s => s.section_subject_id === Number(ssId));
+      if (currSubj) {
+        currentSubjectBaseline = {
+          isOverall: false,
+          name: `${currSubj.subject_name} (${currSubj.subject_code})`,
+          attended: currSubj.attended,
+          conducted: currSubj.conducted,
+          percentage: currSubj.percentage,
+          subjects: [currSubj]
+        };
+      } else {
+        currentSubjectBaseline = {
+          isOverall: false,
+          name: 'Subject',
+          attended: 0,
+          conducted: 0,
+          percentage: 0,
+          subjects: []
+        };
+      }
     }
 
     // 2. Fetch upcoming scheduled sessions up to untilDate
@@ -1291,11 +1447,14 @@ async function detectUpcomingClasses() {
 
     currentUpcomingSessions = data.data;
 
-    // Initialize all detected sessions as PRESENT by default
-    currentUpcomingDecisions = {};
+    // Preserve previously toggled decisions if session already exists, else default to PRESENT
+    const newDecisions = {};
     currentUpcomingSessions.forEach(s => {
-      currentUpcomingDecisions[s.session_id] = 'PRESENT';
+      newDecisions[s.session_id] = (currentUpcomingDecisions && currentUpcomingDecisions[s.session_id])
+        ? currentUpcomingDecisions[s.session_id]
+        : 'PRESENT';
     });
+    currentUpcomingDecisions = newDecisions;
 
     renderUpcomingSessionsTable();
     updateInteractiveCalculations();
@@ -1338,7 +1497,7 @@ function renderUpcomingSessionsTable() {
         <td><span class="subject-code-badge">#${idx + 1}</span></td>
         <td><strong>${formatAcademicDate(s.session_date)}</strong> <span class="text-muted">(${s.day_of_week})</span></td>
         <td><code>${formatTime12h(s.start_time)} – ${formatTime12h(s.end_time)}</code></td>
-        <td>${s.subject_name} (${s.subject_code})</td>
+        <td><span class="subject-code-badge">${s.subject_code}</span> <strong>${s.subject_name}</strong></td>
         <td>
           <div class="decision-toggle-group">
             <button type="button" 
@@ -1364,6 +1523,7 @@ function renderUpcomingSessionsTable() {
 }
 
 function updateInteractiveCalculations() {
+  if (!currentSubjectBaseline) return;
   const T_curr = currentSubjectBaseline.conducted;
   const P_curr = currentSubjectBaseline.attended;
 
@@ -1419,5 +1579,54 @@ function updateInteractiveCalculations() {
     // Classes needed: (P + c) / (T + c) >= 0.75 => c >= 3 * T - 4 * P
     const needed = Math.max(0, Math.ceil(3 * projectedConducted - 4 * projectedAttended));
     bufferEl.innerHTML = `<span class="text-danger">⚠️ Attendance shortage:</span> You must attend at least <strong>${needed}</strong> more consecutive lecture(s) to reach 75%.`;
+  }
+
+  // Render per-subject breakdown if All Subjects is active
+  const breakdownCard = document.getElementById('predSubjectBreakdownCard');
+  const breakdownGrid = document.getElementById('predSubjectBreakdownGrid');
+  if (breakdownCard && breakdownGrid) {
+    if (currentSubjectBaseline.isOverall && currentSubjectBaseline.subjects && currentSubjectBaseline.subjects.length > 1) {
+      breakdownCard.classList.remove('hidden');
+      const countEl = document.getElementById('predSubjectBreakdownCount');
+      if (countEl) countEl.textContent = `${currentSubjectBaseline.subjects.length} Courses Tracked`;
+
+      breakdownGrid.innerHTML = currentSubjectBaseline.subjects.map(subj => {
+        // Find upcoming sessions belonging to this subject
+        const subjUpcoming = currentUpcomingSessions.filter(s => s.section_subject_id === subj.section_subject_id);
+        let sPres = 0;
+        let sAbs = 0;
+        let sLeave = 0;
+        subjUpcoming.forEach(s => {
+          const dec = currentUpcomingDecisions[s.session_id] || 'PRESENT';
+          if (dec === 'PRESENT') sPres++;
+          else if (dec === 'ABSENT') sAbs++;
+          else if (dec === 'LEAVE') sLeave++;
+        });
+
+        const sProjCond = subj.conducted + sPres + sAbs;
+        const sProjAtt = subj.attended + sPres;
+        const sProjPct = sProjCond > 0 ? Number(((sProjAtt / sProjCond) * 100).toFixed(2)) : 0;
+        const sEligible = sProjPct >= 75.0;
+
+        return `
+          <div class="subject-card" style="padding: 1rem; border-left: 4px solid ${sEligible ? 'var(--success)' : 'var(--danger)'};">
+            <div class="subject-card-header" style="margin-bottom: 0.5rem;">
+              <div>
+                <h4 style="font-size: 0.95rem; margin: 0;">${subj.subject_name}</h4>
+                <span class="subject-code-badge">${subj.subject_code}</span>
+              </div>
+              <span class="badge ${sEligible ? 'badge-present' : 'badge-absent'}">${sProjPct}%</span>
+            </div>
+            <div class="session-meta" style="font-size: 0.8rem; padding-bottom: 0; border: none; margin-top: 0.5rem;">
+              <div>Baseline: <strong>${subj.attended}/${subj.conducted} (${subj.percentage}%)</strong></div>
+              <div>Upcoming: <strong>+${subjUpcoming.length}</strong> <span class="text-muted">(${sPres}P, ${sAbs}A, ${sLeave}L)</span></div>
+              <div>Projected: <strong class="${sEligible ? 'text-success' : 'text-danger'}">${sProjAtt}/${sProjCond}</strong></div>
+            </div>
+          </div>
+        `;
+      }).join('');
+    } else {
+      breakdownCard.classList.add('hidden');
+    }
   }
 }

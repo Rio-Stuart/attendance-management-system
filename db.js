@@ -615,11 +615,63 @@ class AttendanceDB {
     return { success: true, count: records.length };
   }
 
-  finalizeAttendance(sessionId, adminId) {
+  getSessionFinalizeWindow(session) {
+    const dateStr = session.session_date instanceof Date
+      ? session.session_date.toISOString().split('T')[0]
+      : String(session.session_date).split('T')[0];
+
+    const startTime = String(session.start_time || '00:00').trim();
+    const endTime = String(session.end_time || '23:59').trim();
+    const normStart = startTime.length === 5 ? `${startTime}:00` : startTime;
+    const normEnd = endTime.length === 5 ? `${endTime}:00` : endTime;
+
+    const startDt = new Date(`${dateStr}T${normStart}`);
+    let endDt = new Date(`${dateStr}T${normEnd}`);
+    if (endDt < startDt) {
+      endDt = new Date(endDt.getTime() + 24 * 60 * 60 * 1000);
+    }
+    const maxFinalizeDt = new Date(endDt.getTime() + 3 * 24 * 60 * 60 * 1000);
+    const now = new Date();
+
+    const isFuture = now < startDt;
+    const isLive = now >= startDt && now <= endDt;
+    const isWithinGrace = now > endDt && now <= maxFinalizeDt;
+    const isExpired = now > maxFinalizeDt;
+    const canFinalize = (isLive || isWithinGrace) && session.status !== 'FINALIZED' && session.status !== 'CANCELLED';
+
+    return {
+      startDt,
+      endDt,
+      maxFinalizeDt,
+      isFuture,
+      isLive,
+      isWithinGrace,
+      isExpired,
+      canFinalize
+    };
+  }
+
+  finalizeAttendance(sessionId, adminId, skipTimeCheck = false) {
     const session = this.class_sessions.find(cs => cs.id === Number(sessionId));
     if (!session) throw new Error('Session not found');
     if (session.status === 'FINALIZED') throw new Error('Session is already FINALIZED');
     if (session.status === 'CANCELLED') throw new Error('Cannot finalize a CANCELLED session');
+
+    // Invariant: Future sessions cannot be finalised in advance.
+    // Must be during the session period or up to 3 days after original session endtime only.
+    if (!skipTimeCheck) {
+      const window = this.getSessionFinalizeWindow(session);
+      if (window.isFuture) {
+        throw new Error(
+          `Cannot finalize attendance for a future session. Finalization is only allowed manually during the session (${session.start_time} – ${session.end_time}) or up to 3 days after original session end time.`
+        );
+      }
+      if (window.isExpired) {
+        throw new Error(
+          `Finalization window expired. Attendance can only be finalized during the session or up to 3 days from the original session end time.`
+        );
+      }
+    }
 
     // 1. Get eligible active roster
     const eligibleEnrollments = this.findActiveEnrollmentsOnDate(session.section_id, session.session_date);
@@ -1050,11 +1102,28 @@ class AttendanceDB {
   // ---- Interactive Session-by-Session Predictor with Leave Support ----
   predictAttendanceInteractive(studentId, sectionSubjectId, sessionDecisions = {}) {
     const sid = Number(studentId);
-    const ssid = Number(sectionSubjectId);
+    const ssid = sectionSubjectId && sectionSubjectId !== 'all' ? Number(sectionSubjectId) : null;
 
-    const stats = this.calculateSubjectAttendance(sid, ssid);
-    const P_curr = stats.attended;
-    const T_curr = stats.conducted;
+    let P_curr = 0;
+    let T_curr = 0;
+    let currentPercentage = 0;
+
+    if (!ssid) {
+      const activeEnrollment = this.student_section_enrollments.find(e =>
+        e.student_id === sid && e.status === 'ACTIVE'
+      );
+      if (activeEnrollment) {
+        const overall = this.calculateOverallAttendance(sid, activeEnrollment.section_id);
+        P_curr = overall.totalAttended;
+        T_curr = overall.totalConducted;
+        currentPercentage = overall.overallPercentage;
+      }
+    } else {
+      const stats = this.calculateSubjectAttendance(sid, ssid);
+      P_curr = stats.attended;
+      T_curr = stats.conducted;
+      currentPercentage = stats.percentage;
+    }
 
     let plannedPresent = 0;
     let plannedAbsent = 0;
@@ -1092,7 +1161,7 @@ class AttendanceDB {
     return {
       current_conducted: T_curr,
       current_attended: P_curr,
-      current_percentage: stats.percentage,
+      current_percentage: currentPercentage,
       planned_present: plannedPresent,
       planned_absent: plannedAbsent,
       planned_leave: plannedLeave,
